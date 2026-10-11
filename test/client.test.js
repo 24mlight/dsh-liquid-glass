@@ -703,10 +703,11 @@ test("rail: toggle is centred on the rail and level with the title pill, the rai
   const text = css();
   const { inside, outside } = phoneSplit(text);
   const tog = block(outside, "#lg-rail-toggle {");
-  assert.match(tog, /left: calc\(var\(--lg-rail-cx, 28px\) - 20px\)/, "centred on the rail's icons");
+  assert.match(tog, /left: calc\(var\(--lg-rail-cx, 28px\) - 16px\)/, "centred on the rail's icons");
   assert.match(tog, /top: var\(--lg-toggle-top/, "top edge follows the title pill");
+  assert.match(tog, /width: 32px;\s*height: 32px/, "toggle is 32px");
   assert.ok(!/#lg-rail-toggle \{\s*left:/.test(inside), "toggle is not shifted sideways when the rail opens");
-  assert.match(block(inside, 'body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {'.replace("body", ":not(.lg-rail-hidden) body")), /margin-top: calc\(var\(--lg-toggle-top, 8px\) \+ 48px\)/);
+  assert.match(block(inside, 'body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {'.replace("body", ":not(.lg-rail-hidden) body")), /margin-top: calc\(var\(--lg-toggle-top, 8px\) \+ 40px\)/);
   assert.match(block(inside, ".bt-rail .bt-row :is(.bt-mark, .bt-cluster) {"), /zoom: 0\.78/);
   assert.match(block(inside, ".bt-rail .bt-row {"), /min-height: 40px/, "rows stay a decent touch target");
   assert.ok(!outside.includes(".bt-rail .bt-row :is(.bt-mark"), "avatar shrink is phone-only");
@@ -740,4 +741,18 @@ test("phone: group-chat avatar sits on the name's line, to its left (phone-only)
   assert.match(block(inside, "body[data-bt-motion] .bt-group-name {"), /margin-left: 30px/);
   assert.ok(!outside.includes(".bt-group-msg .bt-astack[data-lead]"), "desktop keeps ds-bot's own avatar placement");
   assert.ok(!/\.bt-group-name \{\s*margin-left/.test(outside), "desktop name offset untouched");
+});
+
+test("phone: DSH Agent header title is a centred pill clear of the rail toggle (phone-only)", () => {
+  const { inside, outside } = phoneSplit(css());
+  const head = 'header:is([class$="_header"], [class*="_header "]):has([class*="_titleRow"])';
+  assert.ok(inside.includes(head), "header rule lives in the phone block");
+  assert.ok(!outside.includes("_titleRow"), "desktop header is untouched");
+  assert.match(block(inside, head), /padding: var\(--lg-toggle-top, 8px\) 12px 8px/, "pill top level with the toggle");
+  assert.match(block(inside, `.lg-rail-hidden body[data-bt-motion] ${head}`), /padding-inline: 56px/, "room for the toggle on both sides");
+  assert.match(block(inside, 'header [class*="_titleRow"]'), /justify-content: center/);
+  const pill = block(inside, 'header nav[class*="_crumbs"] {');
+  assert.match(pill, /height: 32px/, "same height as the toggle");
+  assert.match(pill, /box-sizing: border-box/);
+  assert.match(pill, /border-radius: 999px/);
 });
