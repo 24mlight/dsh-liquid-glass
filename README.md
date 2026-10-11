@@ -16,7 +16,13 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 
 ## Screenshots
 
-Early preview with ds-bot (the v0.2.0 look). v0.3.0 adds edge refraction, the panel-free sidebar and the phone layout above; new screenshots will follow.
+### v0.3.0: settings sheet on a phone (390px), light and dark, edge refraction on
+
+![settings sheet on a phone, light and dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/settings-sheet-390.png)
+
+### Early preview with ds-bot (the v0.2.0 look)
+
+v0.3.0 adds edge refraction, the panel-free sidebar and the phone layout above; more v0.3.0 screenshots will follow.
 
 | Light | Dark |
 |---|---|
