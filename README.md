@@ -1,4 +1,4 @@
-# dsh-glass-skin
+# dsh-liquid-glass
 
 An Apple-style **Liquid Glass** skin for [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh) (DSH).
 It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.npmjs.com/package/ds-bot) multi-bot plugin, so DSH and ds-bot look like one app. Light and dark themes, desktop browsers and Android WebView.
@@ -89,6 +89,8 @@ systemctl restart dsh-web
 ```
 
 ## Upgrade / remove
+
+The plugin's package name is `dsh-glass-skin`, so that is the name `update` and `remove` use (the GitHub repository is `dsh-liquid-glass`).
 
 ```bash
 dsh plugin --profile web update dsh-glass-skin && systemctl restart dsh-web
