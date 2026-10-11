@@ -631,56 +631,62 @@ test("dark theme is neutral black: black wallpaper, grey glass, never flat black
 });
 
 /* ------------------------------------------------------------------ *
- * Phone bot rail: a toggle button, hidden by default (ds-bot, <=480px)
+ * Phone bot rail: a toggle button, shown by default (ds-bot, <=480px)
  * ------------------------------------------------------------------ */
 
-test("bot-rail toggle button is mounted once and the rail starts hidden", () => {
+test("bot-rail toggle button is mounted once and the rail starts shown", () => {
   const b = browser();
   b.mod.apply();
   b.mod.apply();
   assert.ok(b.byId.has("lg-rail-toggle"), "toggle button mounted");
   assert.equal(b.buttons.length, 1, "inserted once");
-  assert.ok(b.classes.has("lg-rail-hidden"), "hidden by default");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "shown by default");
 });
 
 test("clicking the toggle shows and hides the rail, and the choice is remembered", () => {
   const b = browser();
   b.mod.apply();
   b.click("#lg-rail-toggle");
-  assert.ok(!b.classes.has("lg-rail-hidden"), "opened");
-  assert.equal(b.store.get("dsh-glass-skin:rail"), "open");
+  assert.ok(b.classes.has("lg-rail-hidden"), "closed");
+  assert.equal(b.store.get("dsh-glass-skin:rail-v2"), "hidden");
   b.click("#lg-rail-toggle");
-  assert.ok(b.classes.has("lg-rail-hidden"), "closed again");
-  assert.equal(b.store.get("dsh-glass-skin:rail"), "hidden");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "opened again");
+  assert.equal(b.store.get("dsh-glass-skin:rail-v2"), "open");
 
   const again = browser();
-  again.store.set("dsh-glass-skin:rail", "open");
+  again.store.set("dsh-glass-skin:rail-v2", "hidden");
   again.mod.apply();
-  assert.ok(!again.classes.has("lg-rail-hidden"), "a saved open state is restored");
+  assert.ok(again.classes.has("lg-rail-hidden"), "a saved closed state is restored");
+
+  const old = browser();
+  old.store.set("dsh-glass-skin:rail", "hidden");   // written by the old auto-close
+  old.mod.apply();
+  assert.ok(!old.classes.has("lg-rail-hidden"), "the old key is ignored, so the rail starts shown");
 });
 
-test("picking a bot in the open rail closes it; other clicks leave it alone", async () => {
+test("picking a bot or any other click leaves the rail open; only the toggle closes it", async () => {
   const b = browser();
   b.mod.apply();
-  b.click("#lg-rail-toggle");                       // open
   b.click("body");                                  // some other click
   assert.ok(!b.classes.has("lg-rail-hidden"), "unrelated click keeps it open");
-  b.click('[class*="sidebarCol"] .bt-row');         // pick a bot
+  b.click('[class*="sidebarCol"] .bt-row');         // pick a bot (or the DSH Agent)
   await new Promise((r) => setTimeout(r, 5));
-  assert.ok(b.classes.has("lg-rail-hidden"), "bot pick closes the rail");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "bot pick keeps the rail open");
+  assert.equal(b.store.get("dsh-glass-skin:rail-v2"), undefined, "nothing written by a pick");
 });
 
 test("blocked storage never breaks the toggle", () => {
   const b = browser({ storageBlocked: true });
   b.mod.apply();
-  assert.ok(b.classes.has("lg-rail-hidden"), "defaults to hidden");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "defaults to shown");
   b.click("#lg-rail-toggle");
-  assert.ok(!b.classes.has("lg-rail-hidden"), "still toggles for this visit");
+  assert.ok(b.classes.has("lg-rail-hidden"), "still toggles for this visit");
 });
 
 test("the observer puts the toggle back if the app drops it, and keeps the rail state", () => {
   const b = browser();
   b.mod.apply();
+  b.click("#lg-rail-toggle");                       // close it
   b.byId.delete("lg-rail-toggle");
   b.fire();
   assert.ok(b.byId.has("lg-rail-toggle"), "re-mounted");
@@ -722,9 +728,8 @@ test("rail: toggle is centred on the rail and level with the title pill, the rai
   assert.match(tog, /width: 32px;\s*height: 32px/, "toggle is 32px");
   assert.ok(!/#lg-rail-toggle \{\s*left:/.test(inside), "toggle is not shifted sideways when the rail opens");
   assert.match(block(inside, 'body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {'.replace("body", ":not(.lg-rail-hidden) body")), /margin-top: calc\(var\(--lg-toggle-top, 8px\) \+ 40px\)/);
-  assert.match(block(inside, ".bt-rail .bt-row :is(.bt-mark, .bt-cluster) {"), /zoom: 0\.78/);
-  assert.match(block(inside, ".bt-rail .bt-row {"), /min-height: 40px/, "rows stay a decent touch target");
-  assert.ok(!outside.includes(".bt-rail .bt-row :is(.bt-mark"), "avatar shrink is phone-only");
+  assert.match(block(outside, ".bt-rail .bt-row :is(.bt-mark, .bt-cluster) {"), /zoom: 0\.78/);
+  assert.match(block(outside, ".bt-rail .bt-row {"), /min-height: 40px/, "rows stay a decent touch target");
 });
 
 test("rail toggle lines up with the title pill's top edge and the rail icons' centre line", () => {
@@ -795,9 +800,11 @@ test("phone: message tools sit under the reply, never off screen (phone-only)", 
   assert.match(block(inside, ':has(> [data-chat-flow]) {\n          overflow-x'), /overflow-x: hidden/, "the conversation never scrolls sideways");
 });
 
-test("phone: the bot rail's list scrolls without a bar that narrows the rail (phone-only)", () => {
+test("the narrow rail is styled by its own presence, at any width (foldables too)", () => {
   const { inside, outside } = phoneSplit(css());
-  assert.ok(!outside.includes(".bt-rail .bt-list"), "desktop keeps its scrollbar");
-  assert.match(block(inside, ".bt-rail .bt-list {"), /scrollbar-width: none/);
-  assert.match(block(inside, ".bt-rail .bt-list::-webkit-scrollbar {"), /display: none/);
+  assert.ok(!inside.includes(".bt-rail .bt-list"), "not tied to the phone breakpoint");
+  assert.match(block(outside, '[class*="sidebarCol"]:has(.bt-rail) {'), /margin: 6px 0 6px 6px/, "rail gets the narrow inset");
+  assert.match(block(outside, ".bt-rail .bt-list {"), /scrollbar-width: none/);
+  assert.match(block(outside, ".bt-rail .bt-list::-webkit-scrollbar {"), /display: none/);
+  assert.match(block(outside, ':has(.bt-rail) :is(.bt-round, .bt-account) {'), /zoom: 0\.85/, "the wide sidebar's buttons keep their size");
 });
