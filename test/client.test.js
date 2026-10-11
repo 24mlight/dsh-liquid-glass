@@ -613,7 +613,21 @@ test("wallpaper stays one flat color", () => {
 
 test("dark composer placeholder is lifted for contrast", () => {
   const body = block(css(), '[data-ds-dark-theme] [data-composer-card] [class*="_placeholder"] {');
-  assert.match(body, /color: #b4bccb/);
+  assert.match(body, /color: #b6b8bc/);
+});
+
+test("dark theme is neutral black: black wallpaper, grey glass, never flat black", () => {
+  const text = css();
+  assert.match(block(text, "body[data-ds-dark-theme]::before {"), /background: #000000/);
+  const dark = block(text, "html.glass-skin [data-ds-dark-theme] {");
+  for (const m of dark.matchAll(/(--[\w-]+):\s*rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/g)) {
+    const [, name, r, g, b, a] = m;
+    assert.ok(Number(b) - Number(r) <= 6, `${name} is tinted blue: rgba(${r}, ${g}, ${b})`);
+    if (/^--(lg-fill(?!-piece|-card)|dsw-alias-bg)/.test(name)) {
+      const onBlack = Number(r) * Number(a);
+      assert.ok(onBlack >= 12, `${name} lands at ${onBlack.toFixed(1)}/255 on black: too dark to read as a surface`);
+    }
+  }
 });
 
 /* ------------------------------------------------------------------ *
@@ -755,4 +769,15 @@ test("phone: DSH Agent header title is a centred pill clear of the rail toggle (
   assert.match(pill, /height: 32px/, "same height as the toggle");
   assert.match(pill, /box-sizing: border-box/);
   assert.match(pill, /border-radius: 999px/);
+});
+
+test("trajectory details panel is near-solid glass, not the 34% layer", () => {
+  const text = css();
+  const panel = block(text, '[class*="_split"] aside[class*="_details"]');
+  assert.match(panel, /--dsw-alias-bg-layer-1: var\(--lg-fill-solid\)/, "inner layer-1 surfaces follow");
+  assert.match(panel, /background: var\(--lg-fill-solid\)/);
+  for (const m of text.matchAll(/--lg-fill-solid: rgba\([^)]*,\s*([\d.]+)\)/g)) {
+    assert.ok(Number(m[1]) >= 0.9, `--lg-fill-solid alpha ${m[1]} too clear`);
+  }
+  assert.equal([...text.matchAll(/--lg-fill-solid: rgba/g)].length, 2, "light and dark values");
 });

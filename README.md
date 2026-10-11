@@ -15,7 +15,8 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 - **Phone: collapsible Bot rail (ds-bot).** On a phone ds-bot shows its bots as a rail that cannot be closed and takes width from the conversation. A small 32px glass button in the top-left corner, inside the rail's column, now shows and hides it. The rail starts hidden, picking a bot closes it again, and the choice is remembered. The button lines up with the title pill's top edge and the rail icons' centre line, measured in the page.
 - **Phone: DSH Agent title centred (ds-bot 0.1.2+).** A DSH Agent session shows DSH's own conversation header, whose title sat at the left edge, under the rail button once the rail was closed. It is now a centred glass pill, the same height as the button and level with it.
 - **Phone: bot avatar next to its name (ds-bot).** In group chats the avatar sits on the same line as the bot's name instead of at the bottom of a long reply.
-- **Light and dark.** Dark mode follows the app's own theme switch.
+- **Readable trajectory details.** The event panel DSH opens from the trajectory view (over the table on a phone) is near-solid frosted glass, so the table behind it no longer shows through its text.
+- **Light and dark.** Dark mode follows the app's own theme switch. Dark is true black, like X's "Lights out": a pure black wallpaper with neutral grey glass (no navy tint) that still reads as raised surfaces, and only the accent stays blue.
 
 ## Screenshots
 
