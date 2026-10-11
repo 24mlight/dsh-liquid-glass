@@ -199,7 +199,7 @@ test("card rule matches only classes ending in _card, not _cardTitle or _cards",
 
 test("per-message surfaces carry no backdrop-filter (scroll perf in WebView)", () => {
   const text = css();
-  assert.doesNotMatch(block(text, '[data-chat-flow-kind="user"] [class*="_bubble"] {'), /backdrop-filter/);
+  assert.doesNotMatch(block(text, '[class*="_userRow"]) [class*="_bubble"] {'), /backdrop-filter/);
   assert.doesNotMatch(block(text, ".md-code-block {"), /backdrop-filter/);
   assert.match(block(text, "[data-composer-card] {"), /backdrop-filter/);
 });
@@ -807,4 +807,11 @@ test("the narrow rail is styled by its own presence, at any width (foldables too
   assert.match(block(outside, ".bt-rail .bt-list {"), /scrollbar-width: none/);
   assert.match(block(outside, ".bt-rail .bt-list::-webkit-scrollbar {"), /display: none/);
   assert.match(block(outside, ':has(.bt-rail) :is(.bt-round, .bt-account) {'), /zoom: 0\.85/, "the wide sidebar's buttons keep their size");
+});
+
+test("every user-side bubble is glass, so a steering or unsent message never flashes the theme color", () => {
+  const text = css();
+  const sel = ':is([data-chat-flow-kind="user"], [data-chat-flow-kind="steering"], [data-chat-flow-kind="question-reply"], [data-chat-flow-kind="command-input"], [class*="_userRow"]) [class*="_bubble"] {';
+  assert.match(block(text, "html.glass-skin " + sel), /background: rgba\(var\(--lg-accent\), 0\.13\)/, "light");
+  assert.match(block(text, "[data-ds-dark-theme] " + sel), /background: rgba\(var\(--lg-accent\), 0\.20\)/, "dark, not ds-bot's near-white");
 });

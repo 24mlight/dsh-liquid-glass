@@ -17,6 +17,7 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 - **Phone: message tools under the reply (ds-bot).** React, reply and more sit under each reply instead of off the right edge, so the conversation never scrolls sideways. They are always shown under the last message of a reply and appear on tap for earlier ones.
 - **Steady Bot rail at any width (ds-bot).** The narrow rail is styled by its own presence, not a screen-width breakpoint, so phones, unfolded foldables and narrow windows all get the same fit: no tile cut off at the edge, and when the keyboard opens and the bot list has to scroll, it scrolls by touch with no scrollbar, so the icons never shift.
 - **Phone: bot avatar next to its name (ds-bot).** In group chats the avatar sits on the same line as the bot's name instead of at the bottom of a long reply.
+- **No flash on a just-sent message.** A message sent while a bot is still working (steering, or not yet admitted) gets the same accent glass as a sent one, instead of ds-bot's theme color, which flashed near-white in dark mode.
 - **Readable trajectory details.** The event panel DSH opens from the trajectory view (over the table on a phone) is near-solid frosted glass, so the table behind it no longer shows through its text.
 - **Light and dark.** Dark mode follows the app's own theme switch. Dark is true black, like X's "Lights out": a pure black wallpaper with neutral grey glass (no navy tint) that still reads as raised surfaces, and only the accent stays blue.
 
