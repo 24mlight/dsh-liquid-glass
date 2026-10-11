@@ -12,6 +12,8 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 - **Edge refraction (Chromium, incl. Android WebView).** The title pill, the plain-DSH composer and the settings sheets bend what is behind them at their edges, like a lens. Firefox and Safari keep the blur-only look, and so does anyone who asks for reduced transparency. It is never used on messages or the sidebar.
 - **No gradients of its own.** All of the skin's colors are flat. ds-bot's own bot colors (gradient avatars, color blocks, usage bars) are left exactly as ds-bot paints them.
 - **Phone layout (480px and below).** Assistant replies run full width without a bubble, the settings dialogs (ds-bot and DSH Harness) become full-screen sheets with a top tab strip, the details drawer is a full-width sheet, and the composer's text box shows no scrollbar.
+- **Phone: collapsible Bot rail (ds-bot).** On a phone ds-bot shows its bots as a rail that cannot be closed and takes width from the conversation. A small glass button in the top-left corner now shows and hides it. The rail starts hidden, picking a bot closes it again, and the choice is remembered. The button lines up with the title pill's top edge and the rail icons' centre line, measured in the page.
+- **Phone: bot avatar next to its name (ds-bot).** In group chats the avatar sits on the same line as the bot's name instead of at the bottom of a long reply.
 - **Light and dark.** Dark mode follows the app's own theme switch.
 
 ## Screenshots
@@ -49,14 +51,15 @@ dsh plugin --profile web update dsh-glass-skin && systemctl restart dsh-web
 dsh plugin --profile web remove dsh-glass-skin && systemctl restart dsh-web
 ```
 
-Removing the plugin removes the whole skin: its stylesheet, the refraction filters and its class names.
+Removing the plugin removes the whole skin: its stylesheet, the refraction filters, the phone rail button and its class names.
 
 ## How it works
 
 ```
 lib/client.js    browser half: injects one <style> (and, on Chromium, one hidden
                  <svg> of refraction filters) and a MutationObserver that
-                 re-mounts them if the app wipes them. No DOM restructuring.
+                 re-mounts them if the app wipes them. The only element it adds
+                 besides those is the phone rail button; no DOM restructuring.
 lib/index.js     host half: no-op (pure client skin).
 cordis.patch.yml mounts the plugin entry into the profile tree.
 ```

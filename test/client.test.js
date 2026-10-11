@@ -31,6 +31,8 @@ function bootstrap() {
     head: { appendChild(el) { styleEl = el; } },
     createElement() { return { id: null, textContent: "" }; },
     getElementById(id) { return styleEl && styleEl.id === id ? styleEl : null; },
+    addEventListener() {},
+    removeEventListener() {},
   };
   const observers = [];
   const MutationObserver = class {
@@ -339,7 +341,7 @@ const UA = {
 };
 
 /** A fuller DOM stub: element registry, <body>, navigator, matchMedia. */
-function browser({ ua = UA.chrome, brands, reduced = false } = {}) {
+function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = false, pill = null, rail = null } = {}) {
   let registration = null;
   const byId = new Map();
   const node = (id) => ({
@@ -348,8 +350,13 @@ function browser({ ua = UA.chrome, brands, reduced = false } = {}) {
     remove() { if (byId.get(this.id) === this) byId.delete(this.id); },
   });
   const classes = new Set();
+  const styleProps = new Map();
   const documentElement = {
     classes,
+    style: {
+      setProperty(k, v) { styleProps.set(k, v); },
+      removeProperty(k) { styleProps.delete(k); },
+    },
     classList: {
       add(c) { classes.add(c); },
       remove(c) { classes.delete(c); },
@@ -357,11 +364,13 @@ function browser({ ua = UA.chrome, brands, reduced = false } = {}) {
     },
   };
   const inserted = [];
+  const buttons = [];
   const body = {
     insertAdjacentHTML(pos, html) {
-      inserted.push(html);
-      const m = /^<svg[^>]*\sid="([^"]+)"/.exec(html);
-      if (m) byId.set(m[1], node(m[1]));
+      const m = /^<(svg|button)[^>]*\sid="([^"]+)"/.exec(html);
+      if (m && m[1] === "svg") inserted.push(html);   // `inserted` tracks the refraction <svg> only
+      else if (m) buttons.push(html);
+      if (m) byId.set(m[2], node(m[2]));
     },
   };
   const document = {
@@ -370,7 +379,15 @@ function browser({ ua = UA.chrome, brands, reduced = false } = {}) {
     head: { appendChild(el) { byId.set(el.id, el); } },
     createElement() { return node(null); },
     getElementById(id) { return byId.get(id) || null; },
+    querySelector(sel) {
+      const r = sel.includes(".bt-pill") ? pill : sel.includes(".bt-rail") ? rail : null;
+      return r ? { getBoundingClientRect: () => r } : null;
+    },
+    addEventListener(type, fn) { if (type === "click") clicks.add(fn); },
+    removeEventListener(type, fn) { if (type === "click") clicks.delete(fn); },
   };
+  const clicks = new Set();
+  const store = new Map();
   const observers = [];
   const MutationObserver = class {
     constructor(cb) { this.cb = cb; this.targets = []; this.live = true; observers.push(this); }
@@ -387,11 +404,20 @@ function browser({ ua = UA.chrome, brands, reduced = false } = {}) {
     __ModuleLoader__: { load(reg) { registration = reg; } },
     navigator: { userAgent: ua, ...(brands ? { userAgentData: { brands } } : {}) },
     matchMedia: (q) => (q.includes("reduced-transparency") ? query : { matches: false }),
+    localStorage: {
+      getItem: (k) => { if (storageBlocked) throw new Error("blocked"); return store.has(k) ? store.get(k) : null; },
+      setItem: (k, v) => { if (storageBlocked) throw new Error("blocked"); store.set(k, String(v)); },
+    },
   };
   new Function("window", "document", "MutationObserver", source)(window, document, MutationObserver);
   const mod = registration.factory(() => ({}));
   return {
-    mod, document, byId, classes, inserted, observers, listeners,
+    mod, document, byId, classes, inserted, buttons, observers, listeners, clicks, store, styleProps,
+    /** Fire a click whose target matches only the given selectors. */
+    click(...matches) {
+      const target = { closest: (sel) => (matches.includes(sel) ? {} : null) };
+      for (const fn of [...clicks]) fn({ target });
+    },
     fire() { for (const o of observers) if (o.live) o.cb([]); },
     setReduced(v) { reduced = v; for (const fn of listeners) fn(); },
   };
@@ -588,4 +614,130 @@ test("wallpaper stays one flat color", () => {
 test("dark composer placeholder is lifted for contrast", () => {
   const body = block(css(), '[data-ds-dark-theme] [data-composer-card] [class*="_placeholder"] {');
   assert.match(body, /color: #b4bccb/);
+});
+
+/* ------------------------------------------------------------------ *
+ * Phone bot rail: a toggle button, hidden by default (ds-bot, <=480px)
+ * ------------------------------------------------------------------ */
+
+test("bot-rail toggle button is mounted once and the rail starts hidden", () => {
+  const b = browser();
+  b.mod.apply();
+  b.mod.apply();
+  assert.ok(b.byId.has("lg-rail-toggle"), "toggle button mounted");
+  assert.equal(b.buttons.length, 1, "inserted once");
+  assert.ok(b.classes.has("lg-rail-hidden"), "hidden by default");
+});
+
+test("clicking the toggle shows and hides the rail, and the choice is remembered", () => {
+  const b = browser();
+  b.mod.apply();
+  b.click("#lg-rail-toggle");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "opened");
+  assert.equal(b.store.get("dsh-glass-skin:rail"), "open");
+  b.click("#lg-rail-toggle");
+  assert.ok(b.classes.has("lg-rail-hidden"), "closed again");
+  assert.equal(b.store.get("dsh-glass-skin:rail"), "hidden");
+
+  const again = browser();
+  again.store.set("dsh-glass-skin:rail", "open");
+  again.mod.apply();
+  assert.ok(!again.classes.has("lg-rail-hidden"), "a saved open state is restored");
+});
+
+test("picking a bot in the open rail closes it; other clicks leave it alone", async () => {
+  const b = browser();
+  b.mod.apply();
+  b.click("#lg-rail-toggle");                       // open
+  b.click("body");                                  // some other click
+  assert.ok(!b.classes.has("lg-rail-hidden"), "unrelated click keeps it open");
+  b.click('[class*="sidebarCol"] .bt-row');         // pick a bot
+  await new Promise((r) => setTimeout(r, 5));
+  assert.ok(b.classes.has("lg-rail-hidden"), "bot pick closes the rail");
+});
+
+test("blocked storage never breaks the toggle", () => {
+  const b = browser({ storageBlocked: true });
+  b.mod.apply();
+  assert.ok(b.classes.has("lg-rail-hidden"), "defaults to hidden");
+  b.click("#lg-rail-toggle");
+  assert.ok(!b.classes.has("lg-rail-hidden"), "still toggles for this visit");
+});
+
+test("the observer puts the toggle back if the app drops it, and keeps the rail state", () => {
+  const b = browser();
+  b.mod.apply();
+  b.byId.delete("lg-rail-toggle");
+  b.fire();
+  assert.ok(b.byId.has("lg-rail-toggle"), "re-mounted");
+  b.classes.clear();                                // app rewrote html.className
+  b.fire();
+  assert.ok(b.classes.has("lg-rail-hidden"), "hidden state re-applied with the skin class");
+});
+
+test("dispose removes the toggle, its class and its click listener", () => {
+  const b = browser();
+  b.mod.apply();
+  assert.equal(b.clicks.size, 1);
+  b.mod.dispose();
+  assert.ok(!b.byId.has("lg-rail-toggle"));
+  assert.ok(!b.classes.has("lg-rail-hidden"));
+  assert.equal(b.clicks.size, 0, "click listener removed");
+});
+
+test("rail CSS: hidden rail frees the grid on phones only, toggle is hidden elsewhere", () => {
+  const text = css();
+  const { inside, outside } = phoneSplit(text);
+  const hide = '.lg-rail-hidden body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {';
+  const span = '.lg-rail-hidden body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {';
+  assert.ok(inside.includes(hide) && !outside.includes(hide), "rail hidden only under the phone query");
+  assert.match(block(inside, hide), /display: none/);
+  assert.match(block(inside, span), /grid-column: 1 \/ 3/, "center column spans the freed tracks");
+  assert.ok(!/_frame"\][^{]*\{[^}]*grid-template-columns/.test(inside), "the app's inline grid columns are not fought");
+  assert.match(block(outside, "#lg-rail-toggle {"), /display: none/, "toggle hidden outside the phone block");
+  assert.match(block(inside, "body[data-bt-motion] #lg-rail-toggle {"), /display: flex/);
+  assert.ok(inside.includes("body[data-bt-motion] #lg-rail-toggle"), "scoped to ds-bot's interface");
+});
+
+test("rail: toggle is centred on the rail and level with the title pill, the rail starts below it, art is smaller", () => {
+  const text = css();
+  const { inside, outside } = phoneSplit(text);
+  const tog = block(outside, "#lg-rail-toggle {");
+  assert.match(tog, /left: calc\(var\(--lg-rail-cx, 28px\) - 20px\)/, "centred on the rail's icons");
+  assert.match(tog, /top: var\(--lg-toggle-top/, "top edge follows the title pill");
+  assert.ok(!/#lg-rail-toggle \{\s*left:/.test(inside), "toggle is not shifted sideways when the rail opens");
+  assert.match(block(inside, 'body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {'.replace("body", ":not(.lg-rail-hidden) body")), /margin-top: calc\(var\(--lg-toggle-top, 8px\) \+ 48px\)/);
+  assert.match(block(inside, ".bt-rail .bt-row :is(.bt-mark, .bt-cluster) {"), /zoom: 0\.78/);
+  assert.match(block(inside, ".bt-rail .bt-row {"), /min-height: 40px/, "rows stay a decent touch target");
+  assert.ok(!outside.includes(".bt-rail .bt-row :is(.bt-mark"), "avatar shrink is phone-only");
+});
+
+test("rail toggle lines up with the title pill's top edge and the rail icons' centre line", () => {
+  const b = browser({
+    pill: { top: 12.8, height: 42, left: 105, width: 180 },
+    rail: { left: 6, width: 50, top: 60, height: 500 },
+  });
+  b.mod.apply();
+  assert.equal(b.styleProps.get("--lg-toggle-top"), "13px", "top edge = pill top (rounded to half px)");
+  assert.equal(b.styleProps.get("--lg-rail-cx"), "31px", "centre = rail centre");
+  b.mod.dispose();
+  assert.equal(b.styleProps.size, 0, "dispose removes the measured values");
+});
+
+test("nothing is written when the pill or rail cannot be measured (hidden or absent)", () => {
+  const hidden = browser({ pill: { top: 0, height: 0 }, rail: { left: 0, width: 0 } });
+  hidden.mod.apply();
+  assert.equal(hidden.styleProps.size, 0);
+  const absent = browser();
+  absent.mod.apply();
+  assert.equal(absent.styleProps.size, 0);
+});
+
+test("phone: group-chat avatar sits on the name's line, to its left (phone-only)", () => {
+  const { inside, outside } = phoneSplit(css());
+  assert.match(block(inside, ".bt-group-msg .bt-astack[data-lead] .bt-msg-line {"), /align-items: flex-start/);
+  assert.match(block(inside, ".bt-group-msg .bt-astack[data-lead] .bt-lead {"), /margin-top: -21px/);
+  assert.match(block(inside, "body[data-bt-motion] .bt-group-name {"), /margin-left: 30px/);
+  assert.ok(!outside.includes(".bt-group-msg .bt-astack[data-lead]"), "desktop keeps ds-bot's own avatar placement");
+  assert.ok(!/\.bt-group-name \{\s*margin-left/.test(outside), "desktop name offset untouched");
 });
