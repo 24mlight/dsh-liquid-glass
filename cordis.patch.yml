@@ -1,0 +1,6 @@
+# dsh-glass-skin bundle patch: mounts the client skin into the web profile.
+# Install with:
+#   dsh plugin --profile <name> add github:<owner>/dsh-liquid-glass
+- insert:
+    - id: ui-skin-glass
+      name: dsh-glass-skin
