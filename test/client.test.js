@@ -781,3 +781,16 @@ test("trajectory details panel is near-solid glass, not the 34% layer", () => {
   }
   assert.equal([...text.matchAll(/--lg-fill-solid: rgba/g)].length, 2, "light and dark values");
 });
+
+test("phone: message tools sit under the reply, never off screen (phone-only)", () => {
+  const { inside, outside } = phoneSplit(css());
+  assert.ok(!outside.includes(".bt-msg-line > .bt-tools"), "desktop keeps ds-bot's side tools");
+  const tools = block(inside, ".bt-astack .bt-msg-line > .bt-tools {");
+  assert.match(tools, /bottom: 0/);
+  assert.match(tools, /left: 0/);
+  assert.match(tools, /transform: none/);
+  assert.match(block(inside, ".bt-msg-line > .bt-tools::after {"), /display: none/, "no 128px hover bridge to widen the page");
+  assert.match(inside, /\.bt-msg:last-child > \.bt-msg-line:has\(> \.bt-tools\)[^{]*\{\s*padding-bottom: 28px/, "room made under the reply");
+  assert.match(block(inside, ".bt-astack > .bt-msg:last-child > .bt-msg-line > .bt-tools {"), /visibility: visible/, "always shown under the last message");
+  assert.match(block(inside, ':has(> [data-chat-flow]) {\n          overflow-x'), /overflow-x: hidden/, "the conversation never scrolls sideways");
+});
