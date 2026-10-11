@@ -41,5 +41,17 @@
     "@deepseek-ai/dsh": {
       "optional": true
     }
+  },
+  "author": "24mlight",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/24mlight/dsh-liquid-glass.git"
+  },
+  "homepage": "https://github.com/24mlight/dsh-liquid-glass#readme",
+  "bugs": {
+    "url": "https://github.com/24mlight/dsh-liquid-glass/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
