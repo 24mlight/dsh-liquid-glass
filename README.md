@@ -16,6 +16,12 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 
 ## Screenshots
 
+### v0.3.0: ds-bot group chat on a phone (Android app, light)
+
+Panel-free glass sidebar, the floating title pill (Chief), and the composer, with the conversation scrolling underneath. Bot colors are ds-bot's own.
+
+![ds-bot chat on a phone, v0.3.0](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/phone-chat-v030.png)
+
 ### v0.3.0: settings sheet on a phone (390px), light and dark, edge refraction on
 
 ![settings sheet on a phone, light and dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/settings-sheet-390.png)
