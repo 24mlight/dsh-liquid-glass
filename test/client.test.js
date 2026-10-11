@@ -794,3 +794,10 @@ test("phone: message tools sit under the reply, never off screen (phone-only)", 
   assert.match(block(inside, ".bt-astack > .bt-msg:last-child > .bt-msg-line > .bt-tools {"), /visibility: visible/, "always shown under the last message");
   assert.match(block(inside, ':has(> [data-chat-flow]) {\n          overflow-x'), /overflow-x: hidden/, "the conversation never scrolls sideways");
 });
+
+test("phone: the bot rail's list scrolls without a bar that narrows the rail (phone-only)", () => {
+  const { inside, outside } = phoneSplit(css());
+  assert.ok(!outside.includes(".bt-rail .bt-list"), "desktop keeps its scrollbar");
+  assert.match(block(inside, ".bt-rail .bt-list {"), /scrollbar-width: none/);
+  assert.match(block(inside, ".bt-rail .bt-list::-webkit-scrollbar {"), /display: none/);
+});
