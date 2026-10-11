@@ -16,6 +16,16 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 
 ## Screenshots
 
+### v0.3.0 on the web (desktop browser, light)
+
+ds-bot's group chat: a sidebar with no panel, glass buttons, the floating title pill and composer over the conversation. Bot colors are ds-bot's own.
+
+![ds-bot chat on the web, v0.3.0](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-v030-dsbot-chat.png)
+
+Plain DSH home: the New Session button and the composer are the glass pieces.
+
+![DSH home on the web, v0.3.0](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-v030-dsh-home.png)
+
 ### v0.3.0: ds-bot group chat on a phone (Android app, light)
 
 Panel-free glass sidebar, the floating title pill (Chief), and the composer, with the conversation scrolling underneath. Bot colors are ds-bot's own.
@@ -28,7 +38,7 @@ Panel-free glass sidebar, the floating title pill (Chief), and the composer, wit
 
 ### Web (desktop browser, v0.2.0 look)
 
-Plain DSH, then ds-bot's details drawer, memory dialog and Usage page. v0.3.0 changes the sidebar (no panel) and adds edge refraction; updated web screenshots will follow.
+Plain DSH, then ds-bot's details drawer, memory dialog and Usage page. These are older, v0.2.0 captures: v0.3.0 has no sidebar panel and adds edge refraction (see above).
 
 | Light | Dark |
 |---|---|
