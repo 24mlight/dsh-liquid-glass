@@ -20,6 +20,17 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 
 ![settings sheet on a phone, light and dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/settings-sheet-390.png)
 
+### Web (desktop browser, v0.2.0 look)
+
+Plain DSH, then ds-bot's details drawer, memory dialog and Usage page. v0.3.0 changes the sidebar (no panel) and adds edge refraction; updated web screenshots will follow.
+
+| Light | Dark |
+|---|---|
+| ![plain DSH, light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-dsh-light.png) | ![plain DSH, dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-dsh-dark.png) |
+| ![ds-bot memory dialog, light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-dsbot-memory-light.png) | ![ds-bot details drawer, dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-dsbot-drawer-dark.png) |
+
+![ds-bot usage stats, dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/web-dsbot-usage-dark.png)
+
 ### Early preview with ds-bot (the v0.2.0 look)
 
 v0.3.0 adds edge refraction, the panel-free sidebar and the phone layout above; more v0.3.0 screenshots will follow.
