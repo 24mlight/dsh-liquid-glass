@@ -228,7 +228,7 @@ test("ds-bot rules are scoped to ds-bot's own interface", () => {
   for (const r of bt) {
     for (const part of r.sel.split(/,(?![^(]*\))/)) {
       if (!part.includes(".bt-")) continue;
-      assert.match(part, /html\.glass-skin body\[data-bt-motion\]/, `unscoped ds-bot selector: ${part}`);
+      assert.match(part, /html\.glass-skin(\.[\w-]+)* body\[data-bt-motion\]/, `unscoped ds-bot selector: ${part}`);
     }
   }
 });
@@ -367,7 +367,7 @@ function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = fal
   const buttons = [];
   const body = {
     insertAdjacentHTML(pos, html) {
-      const m = /^<(svg|button)[^>]*\sid="([^"]+)"/.exec(html);
+      const m = /^<(svg|button|div)[^>]*\sid="([^"]+)"/.exec(html);
       if (m && m[1] === "svg") inserted.push(html);   // `inserted` tracks the refraction <svg> only
       else if (m) buttons.push(html);
       if (m) byId.set(m[2], node(m[2]));
@@ -639,7 +639,7 @@ test("bot-rail toggle button is mounted once and the rail starts shown", () => {
   b.mod.apply();
   b.mod.apply();
   assert.ok(b.byId.has("lg-rail-toggle"), "toggle button mounted");
-  assert.equal(b.buttons.length, 1, "inserted once");
+  assert.equal(b.buttons.filter((h) => h.includes('id="lg-rail-toggle"')).length, 1, "inserted once");
   assert.ok(!b.classes.has("lg-rail-hidden"), "shown by default");
 });
 
@@ -814,4 +814,61 @@ test("every user-side bubble is glass, so a steering or unsent message never fla
   const sel = ':is([data-chat-flow-kind="user"], [data-chat-flow-kind="steering"], [data-chat-flow-kind="question-reply"], [data-chat-flow-kind="command-input"], [class*="_userRow"]) [class*="_bubble"] {';
   assert.match(block(text, "html.glass-skin " + sel), /background: rgba\(var\(--lg-accent\), 0\.13\)/, "light");
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /background: rgba\(var\(--lg-accent\), 0\.20\)/, "dark, not ds-bot's near-white");
+});
+
+/* ------------------------------------------------------------------ *
+ * v0.3.14: Bot list (pull tab on the rail, full-screen list)
+ * ------------------------------------------------------------------ */
+
+test("bot list: the pull tab and the back bar are mounted once, and re-mounted if dropped", () => {
+  const b = browser();
+  b.mod.apply();
+  b.mod.apply();
+  assert.equal(b.buttons.filter((h) => h.includes('id="lg-list-tab"')).length, 1, "tab inserted once");
+  assert.equal(b.buttons.filter((h) => h.includes('id="lg-list-bar"')).length, 1, "bar inserted once");
+  const bar = b.buttons.find((h) => h.includes('id="lg-list-bar"'));
+  // The Android app's back key closes the top visible aria-modal dialog through its 关闭 button.
+  assert.match(bar, /role="dialog" aria-modal="true"/);
+  assert.match(bar, /<button type="button" aria-label="关闭列表"/);
+  b.byId.delete("lg-list-tab");
+  b.fire();
+  assert.ok(b.byId.has("lg-list-tab"), "re-mounted");
+});
+
+test("bot list: dispose removes the tab and the bar", () => {
+  const b = browser();
+  b.mod.apply();
+  b.mod.dispose();
+  assert.ok(!b.byId.has("lg-list-tab"));
+  assert.ok(!b.byId.has("lg-list-bar"));
+});
+
+test("bot list: the rail's right edge and middle are measured for the tab", () => {
+  const b = browser({ rail: { left: 6, top: 88, width: 49, height: 700, right: 55 } });
+  b.mod.apply();
+  assert.equal(b.styleProps.get("--lg-rail-right"), "55px");
+  assert.equal(b.styleProps.get("--lg-rail-mid"), "438px");
+});
+
+test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the chat, under ds-bot's menus", () => {
+  const text = css();
+  assert.match(block(text, "html.glass-skin #lg-list-tab {"), /display: none/);
+  assert.match(block(text, 'body[data-bt-motion]:has([class*="sidebarCol"] .bt-rail) #lg-list-tab {'), /display: flex/);
+  assert.match(block(text, ".lg-list-open #lg-list-tab {"), /display: none/);
+  const { inside } = phoneSplit(text);
+  assert.match(block(inside, ".lg-rail-hidden #lg-list-tab {"), /display: none/, "no tab when the phone rail is closed");
+  const layer = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {');
+  assert.match(layer, /position: fixed/);
+  assert.match(layer, /width: var\(--lg-list-w, 100vw\)/);
+  assert.match(layer, /touch-action: pan-y/, "vertical scroll stays native; sideways swipes reach the script");
+  const z = Number(/z-index: (\d+)/.exec(layer)[1]);
+  assert.ok(z < 60, "ds-bot's menus (z 60) stay above the list");
+  assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] {'), /grid-template-columns: var\(--lg-frame-cols/,
+    "the chat keeps its grid while the sidebar is open");
+  assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 2/);
+  assert.match(block(text, '[class*="sidebarCol"] > [class*="_root"] {'), /width: 100vw !important/,
+    "content is laid out at full width, so the panel reveals it");
+  assert.match(block(text, ".lg-list-open.lg-list-drag body"), /transition: none/, "the width follows the finger");
+  assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
+  assert.match(block(text, "html.glass-skin [data-ds-dark-theme] {"), /--lg-list-bg: rgb\(/, "an opaque list in dark mode");
 });
