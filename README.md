@@ -34,12 +34,24 @@ Settings sheet on a phone, light and dark:
 
 ## Install
 
+No npm account or registry is needed: DSH's `dsh plugin` command hands its arguments to pnpm in the profile directory, and pnpm can install straight from this GitHub repository. Run these on the machine that runs your DSH web profile (it needs `git`):
+
 ```bash
 # optional: the ds-bot multi-bot plugin (the skin is adapted for it)
 dsh plugin --profile web add ds-bot
 
+# the skin, straight from GitHub
 dsh plugin --profile web add github:24mlight/dsh-liquid-glass
 systemctl restart dsh-web
+```
+
+Replace `web` with your profile's name, and restart however you normally restart DSH (`systemctl restart dsh-web` is what a systemd setup uses). After the restart, reload the page.
+
+Prefer a local copy? Clone the repository and add the folder instead:
+
+```bash
+git clone https://github.com/24mlight/dsh-liquid-glass
+dsh plugin --profile web add ./dsh-liquid-glass
 ```
 
 The skin works with or without ds-bot, and the two can be installed in any order. When ds-bot's interface is on (`body[data-bt-motion]`), the skin re-skins its sidebar, header pill, bubbles, details drawer, memory and settings dialogs and the Usage page, flattens ds-bot's own fades (header fade, loading skeletons, theme preview chips), and adjusts bot name colors and secondary text for readability on glass. Bot colors themselves are kept. In ds-bot's classic Agent mode the plain DSH skin applies.
