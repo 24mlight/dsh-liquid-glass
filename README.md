@@ -5,54 +5,35 @@ It restyles the Harness web UI, and it is adapted for the [ds-bot](https://www.n
 
 一个给 DeepSeek Harness（DSH）用的苹果「液态玻璃」风格皮肤插件：它会修改 Harness 的界面，并针对 ds-bot（多 Bot 群聊插件）做了适配。支持亮色和暗色，桌面浏览器和安卓 WebView 都能用。
 
-## What it changes
+## What it looks like (v0.3.0)
 
-- **Harness UI.** Translucent floating title pill and composer, glass menus and dialogs, a sidebar with no panel (only small glass pieces), flat solid colors with no gradients, and controls that press in on touch.
-- **ds-bot.** When ds-bot's interface is on, the skin re-skins its sidebar, header pill, bubbles, details drawer, memory and settings dialogs and the Usage page. ds-bot's own bot colors (including gradient avatars and usage bars) are left exactly as ds-bot paints them. Details below.
-- **Phones.** Below 480px the settings dialogs become full-screen sheets with a top tab strip, assistant replies run full width, and the details drawer is a full-width sheet.
-- **Accessibility.** Reduced-transparency users get near-opaque surfaces, and secondary text stays at 4.5:1 or better in light mode.
+- **Clear, thin glass.** Much thinner fills, so content shows through. The wallpaper is one flat color.
+- **Floating pieces, no slabs.** The sidebar draws no panel: only its buttons and the selected item are small glass pieces. The title pill and the composer float over the conversation.
+- **Edge refraction (Chromium, incl. Android WebView).** The title pill, the plain-DSH composer and the settings sheets bend what is behind them at their edges, like a lens. Firefox and Safari keep the blur-only look, and so does anyone who asks for reduced transparency. It is never used on messages or the sidebar.
+- **No gradients of its own.** All of the skin's colors are flat. ds-bot's own bot colors (gradient avatars, color blocks, usage bars) are left exactly as ds-bot paints them.
+- **Phone layout (480px and below).** Assistant replies run full width without a bubble, the settings dialogs (ds-bot and DSH Harness) become full-screen sheets with a top tab strip, the details drawer is a full-width sheet, and the composer's text box shows no scrollbar.
+- **Light and dark.** Dark mode follows the app's own theme switch. The skin's text colors are tuned to stay readable on glass in both themes.
 
 ## Screenshots
 
-| Light | Dark |
-|---|---|
-| ![desktop light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/desktop-light.png) | ![desktop dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/desktop-dark.png) |
-| ![mobile light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/mobile-light.png) | ![mobile dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/mobile-dark.png) |
-
-### With ds-bot
+Early preview with ds-bot (the v0.2.0 look). v0.3.0 adds edge refraction, the panel-free sidebar and the phone layout above; new screenshots will follow.
 
 | Light | Dark |
 |---|---|
 | ![ds-bot group chat, light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-group-light.png) | ![ds-bot group chat, dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-group-dark.png) |
 | ![ds-bot group chat, phone, light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-group-mobile-light.png) | ![ds-bot group chat, phone, dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-group-mobile-dark.png) |
 
-### Before / after
-
-| ds-bot group chat (light) | ds-bot group chat (dark) |
-|---|---|
-| ![compare group chat light](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-group-desk-light.png) | ![compare group chat dark](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-group-desk-dark.png) |
-| ![compare memory dialog](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-memory-desk-light.png) | ![compare usage stats](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-usage-desk-dark.png) |
-| ![compare details drawer](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-drawer-desk-dark.png) | ![compare group chat on a phone](https://raw.githubusercontent.com/24mlight/dsh-liquid-glass/main/docs/screenshots/dsbot-compare-group-mob-light.png) |
-
-### v0.3.0
-
-- **Edge refraction (Chromium, incl. Android WebView).** The title pill, the composer and the settings sheets bend what is behind them at their edges, like a lens. The skin script adds one hidden `<svg id="lg-svg-defs">` with two SVG filters and sets `html.lg-refract` (only when the engine is Chromium and the user hasn't asked for reduced transparency). It is mounted once, re-mounted by the existing MutationObserver if the app drops it, and removed when the plugin is disposed. Firefox and Safari keep the blur-only look. Never used on messages.
-- **Clearer glass, smaller pieces.** Much thinner fills. The sidebar draws no panel: only its controls and the selected item are small glass pieces. Wallpaper is one flat, slightly deeper color (`#dce3ee` light).
-- **Composer without glow.** No outer or inner glow and no focus ring at any width: a thin top highlight, a soft shadow, and a tinted border on focus.
-- **Phone layout (≤ 480px).** Assistant replies run full width without a bubble, the settings dialogs (ds-bot and DSH Harness) become full-screen sheets with a top tab strip, the details drawer is a full-width sheet, Usage tiles go 2×2, and the composer's text box shows no scrollbar. Custom scrollbars apply to mouse/trackpad only.
-
-### Works with ds-bot
+## Works with ds-bot
 
 The skin supports the [ds-bot](https://www.npmjs.com/package/ds-bot) plugin
 (multi-bot workspace: bot list, Chief, group chats, memory, usage stats, bot
 settings). Install both plugins in the same profile, in any order; when
 ds-bot's interface is on (`body[data-bt-motion]`), the skin re-points
 ds-bot's `--bt-*` tokens at the glass material, floats its details drawer
-and side panes as glass sheets, flattens ds-bot's own gradients (header
-fade, skeletons, theme chips, color swatches, group-avatar masks) and
-darkens bot name colors and secondary text so every label reaches 4.5:1 in
-light and dark. Switching ds-bot to classic Agent mode falls back to the
-plain DSH skin.
+and side panes as glass sheets, flattens ds-bot's own fades (header fade,
+skeletons, theme chips, group-avatar masks) and adjusts bot name colors and
+secondary text for readability on glass. Bot colors themselves are kept.
+Switching ds-bot to classic Agent mode falls back to the plain DSH skin.
 
 ```bash
 dsh plugin --profile web add ds-bot
