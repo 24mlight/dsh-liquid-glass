@@ -1041,3 +1041,15 @@ test("reaction strip: pulled back inside the window, and closed as soon as anyth
   handlers.touchmove.fn();
   assert.equal(pressed.length, 1, "nothing pressed when no popover is open");
 });
+
+test("phone: a roomier rail (62px, full-size art, 50px rows), a bigger title pill, your avatar centred", () => {
+  const { inside, outside } = phoneSplit(css());
+  const side = block(inside, 'body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"]:has(.bt-rail) {');
+  assert.match(side, /width: 62px;/);
+  assert.match(side, /justify-self: start;/, "overflows the app's 56px track instead of stretching it");
+  assert.match(block(inside, 'body[data-bt-motion] [class*="sidebarCol"] .bt-rail .bt-row {'), /min-height: 50px;/);
+  assert.match(block(inside, 'body[data-bt-motion] [class*="sidebarCol"]:has(.bt-rail) :is(.bt-round, .bt-account) {'), /zoom: 1;/, "art and buttons back to full size");
+  assert.match(block(outside, 'body[data-bt-motion] [class*="sidebarCol"] .bt-rail .bt-row :is(.bt-mark, .bt-cluster) {'), /zoom: 0\.78/, "narrow desktop windows keep the compact rail");
+  assert.match(block(inside, "body[data-bt-motion] .bt-pill {"), /zoom: 1\.12;/);
+  assert.match(block(inside, '[class*="_footerActions"]:not(:has([data-slot] > *)) {'), /display: none;/, "an empty plugin slot no longer pushes your avatar aside");
+});
