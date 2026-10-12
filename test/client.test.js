@@ -1007,3 +1007,37 @@ test("light mode: the rail's and the list's buttons are frosted gray glass with 
   assert.doesNotMatch(body, /0 0 0 [0-9.]+px|0 1px 2px/, "no hairline or contour shadow");
   assert.match(block(text, 'body[data-bt-motion]:not([data-ds-dark-theme]) #lg-list-bar {'), /box-shadow: none;/, "the back button's holder adds no second edge");
 });
+
+test("reaction strip: pulled back inside the window, and closed as soon as anything scrolls or a finger drags", () => {
+  const b = browser();
+  const strip = { offsetWidth: 212, style: { left: "366px" } };
+  let open = true;
+  const handlers = {};
+  const pressed = [];
+  b.document.documentElement.clientWidth = 390;
+  b.document.querySelectorAll = (sel) => (sel.includes(".bt-react-strip") && open ? [strip] : []);
+  b.document.querySelector = (sel) => (sel.includes(".bt-react-strip") && open ? strip : null);
+  b.document.addEventListener = (type, fn, opts) => { handlers[type] = { fn, opts }; };
+  b.document.removeEventListener = () => {};
+  b.document.body.dispatchEvent = (ev) => { pressed.push(ev); };
+  globalThis.MouseEvent = globalThis.MouseEvent || class { constructor(type, init) { this.type = type; Object.assign(this, init); } };
+  b.mod.apply();
+  b.fire();
+  assert.equal(strip.style.left, "276px", "centre moved so the right edge sits 8px inside a 390px window");
+  strip.style.left = "120px";
+  b.fire();
+  assert.equal(strip.style.left, "120px", "a strip that fits is left alone");
+
+  for (const type of ["scroll", "touchmove"]) {
+    assert.ok(handlers[type], `${type} listened for`);
+    assert.equal(handlers[type].opts.capture, true, "any scroller, caught on the way down");
+    assert.equal(handlers[type].opts.passive, true, "never blocks scrolling");
+  }
+  handlers.scroll.fn();
+  assert.equal(pressed.length, 1, "a scroll presses outside, which ds-bot's own dismiss closes on");
+  assert.equal(pressed[0].type, "mousedown");
+  assert.equal(pressed[0].bubbles, true, "pressed on <body> and bubbled to ds-bot's window listener");
+  open = false;
+  handlers.touchmove.fn();
+  assert.equal(pressed.length, 1, "nothing pressed when no popover is open");
+});
