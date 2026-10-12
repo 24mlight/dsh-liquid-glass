@@ -842,6 +842,9 @@ test("every user-side bubble is glass, so a steering or unsent message never fla
   const sel = ':is([data-chat-flow-kind="user"], [data-chat-flow-kind="steering"], [data-chat-flow-kind="question-reply"], [data-chat-flow-kind="command-input"], [class*="_userRow"]) [class*="_bubble"] {';
   assert.match(block(text, "html.glass-skin " + sel), /background: var\(--lg-user-fill\)/, "light: neutral glass");
   assert.match(block(text, "html.glass-skin {"), /--lg-user-fill: rgba\(0, 0, 0, 0\.045\)/);
+  assert.match(block(text, "html.glass-skin " + sel), /box-shadow: none;/, "light: flat, no white rim that reads as a ring");
+  assert.match(block(text, "body[data-bt-motion]:not([data-ds-dark-theme]) .bt-ububble {"), /box-shadow: none;/, "ds-bot's sent bubble too");
+  assert.match(block(text, "[data-ds-dark-theme] " + sel), /inset 1px 1px 0 var\(--lg-rim\)/, "dark keeps the glass edge");
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /background: rgba\(var\(--lg-accent\), 0\.20\)/, "dark, not ds-bot's near-white");
 });
 
