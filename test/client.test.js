@@ -800,6 +800,20 @@ test("trajectory details panel is near-solid glass, not the 34% layer", () => {
   assert.equal([...text.matchAll(/--lg-fill-solid: rgba/g)].length, 2, "light and dark values");
 });
 
+test("phone: composer runs edge to edge with 12px margins; the rail stops above it (phone-only)", () => {
+  const { inside, outside } = phoneSplit(css());
+  assert.ok(!outside.includes("--lg-rail-col"), "desktop layout untouched");
+  assert.match(block(inside, "[data-composer-seat] :has(> [data-composer-card]) {"), /padding-left: 12px !important;\s*padding-right: 12px !important;/);
+  assert.match(block(inside, '[data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 1 \/ 3;/,
+    "the conversation spans the rail's column so the composer can");
+  const rail = block(inside, '[data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="sidebarCol"] {');
+  assert.match(rail, /z-index: 2;/, "the rail stays on top and tappable");
+  assert.match(rail, /margin-bottom: var\(--lg-composer-room, 96px\);/, "and ends above the composer");
+  assert.match(block(inside, "[data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {"), /padding-left: var\(--lg-rail-col, 56px\);/,
+    "messages stay clear of the rail");
+  assert.match(block(inside, "[data-conversation-scroll] > [data-composer-seat]:has([data-composer-card]) {"), /margin-left: calc\(-1 \* var\(--lg-rail-col, 56px\)\);/);
+});
+
 test("phone: message tools sit under the reply, never off screen (phone-only)", () => {
   const { inside, outside } = phoneSplit(css());
   assert.ok(!outside.includes(".bt-msg-line > .bt-tools"), "desktop keeps ds-bot's side tools");
