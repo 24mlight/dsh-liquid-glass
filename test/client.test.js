@@ -546,7 +546,7 @@ test("refraction is used only on the title pill, composer, settings sheets and t
 
 test("message bubbles carry no backdrop-filter in any rule", () => {
   const text = css();
-  for (const needle of ["_bubble", ".bt-bubble", ".bt-ububble", ".bt-msg"]) {
+  for (const needle of ["_bubble", ".bt-bubble", ".bt-ububble", ".bt-ubody", ".bt-msg"]) {
     for (const r of rules(text, needle)) {
       assert.doesNotMatch(r.body, /backdrop-filter:\s*(?!none)/, `${needle} must not blur: ${r.sel}`);
     }
@@ -1165,6 +1165,16 @@ test("every user-side bubble is glass, so a steering or unsent message never fla
   assert.match(block(text, "body[data-bt-motion]:not([data-ds-dark-theme]) .bt-ububble {"), /box-shadow: none;/, "ds-bot's sent bubble too");
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /inset 1px 1px 0 var\(--lg-rim\)/, "dark keeps the glass edge");
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /background: rgba\(var\(--lg-accent\), 0\.20\)/, "dark, not ds-bot's near-white");
+});
+
+test("ds-bot 0.1.3's own sent bubble gets the same glass, not its near-black / near-white", () => {
+  const text = css();
+  const light = block(text, "html.glass-skin body[data-bt-motion] .bt-ubody,");
+  assert.match(light, /background: var\(--lg-user-fill\)/);
+  assert.match(light, /box-shadow: none;/);
+  const dark = block(text, "html.glass-skin body[data-bt-motion][data-ds-dark-theme] .bt-ubody,");
+  assert.match(dark, /background: rgba\(var\(--lg-accent\), 0\.20\)/);
+  assert.match(dark, /inset 1px 1px 0 var\(--lg-rim\)/);
 });
 
 /* ------------------------------------------------------------------ *
