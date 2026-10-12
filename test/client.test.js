@@ -555,7 +555,7 @@ test("composer: no glow and no focus ring at any width", () => {
     assert.doesNotMatch(r.body, /--lg-glow/, `glow on composer: ${r.sel}`);
     assert.doesNotMatch(r.body, /0 0 0 [2-9]px/, `focus ring on composer: ${r.sel}`);
   }
-  assert.match(block(text, "html.glass-skin [data-composer-card]:focus-within {"), /border-color: rgba\(var\(--lg-accent\)/);
+  assert.match(block(text, "html.glass-skin [data-composer-card]:focus-within {"), /border-color: var\(--lg-focus-edge\)/);
 });
 
 /** Split the stylesheet into the phone block and everything else. */
@@ -608,9 +608,20 @@ test("sidebar draws no panel (floating pieces only), same box", () => {
   assert.match(body, /margin: 10px 4px 10px 10px/, "desktop geometry unchanged");
 });
 
-test("wallpaper stays one flat color", () => {
-  const body = block(css(), "html.glass-skin body::before {");
-  assert.match(body, /background: #dce3ee;/);
+test("wallpaper stays one flat color: white in light mode, black in dark", () => {
+  const text = css();
+  assert.match(block(text, "html.glass-skin body::before {"), /background: #ffffff;/);
+  assert.match(block(text, "html.glass-skin body[data-ds-dark-theme]::before {"), /background: #000000;/);
+});
+
+test("light mode is neutral white: no blue-tinted shadow, fill or wallpaper", () => {
+  const text = css();
+  const dark = text.indexOf("[data-ds-dark-theme]");
+  const light = text.slice(0, dark);
+  for (const m of light.matchAll(/rgba?\((\d+),\s*(\d+),\s*(\d+)/g)) {
+    const [r, , b] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    assert.ok(b - r < 6, `blue cast in light mode: ${m[0]}`);
+  }
 });
 
 test("dark composer placeholder is lifted for contrast", () => {
@@ -815,7 +826,8 @@ test("the narrow rail is styled by its own presence, at any width (foldables too
 test("every user-side bubble is glass, so a steering or unsent message never flashes the theme color", () => {
   const text = css();
   const sel = ':is([data-chat-flow-kind="user"], [data-chat-flow-kind="steering"], [data-chat-flow-kind="question-reply"], [data-chat-flow-kind="command-input"], [class*="_userRow"]) [class*="_bubble"] {';
-  assert.match(block(text, "html.glass-skin " + sel), /background: rgba\(var\(--lg-accent\), 0\.13\)/, "light");
+  assert.match(block(text, "html.glass-skin " + sel), /background: var\(--lg-user-fill\)/, "light: neutral glass");
+  assert.match(block(text, "html.glass-skin {"), /--lg-user-fill: rgba\(0, 0, 0, 0\.045\)/);
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /background: rgba\(var\(--lg-accent\), 0\.20\)/, "dark, not ds-bot's near-white");
 });
 
