@@ -1,6 +1,6 @@
 {
   "name": "dsh-glass-skin",
-  "version": "0.3.23",
+  "version": "0.3.24",
   "description": "Liquid Glass skin for DeepSeek Harness (DSH): frosted app bar, glass sidebar, translucent surfaces, flat colors with no gradients. Web + mobile WebView.",
   "keywords": [
     "dsh-plugin",
@@ -23,7 +23,9 @@
     "lib/client.js",
     "cordis.patch.yml",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "LICENSE-Inter.txt",
+    "LICENSE-BeVietnamPro.txt"
   ],
   "dsh": {
     "bundle": {

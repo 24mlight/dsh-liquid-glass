@@ -99,3 +99,5 @@ If the look breaks after a DSH upgrade, check whether the app renamed its class 
 ## License
 
 MIT
+
+Bundled fonts, under the SIL Open Font License 1.1: Inter (The Inter Project Authors, see `LICENSE-Inter.txt`) and Be Vietnam Pro (The Be Vietnam Pro Project Authors, see `LICENSE-BeVietnamPro.txt`).

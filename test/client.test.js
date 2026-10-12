@@ -721,10 +721,17 @@ test("dispose removes the toggle, its class and its click listener", () => {
 test("rail CSS: hidden rail frees the grid on phones only, toggle is hidden elsewhere", () => {
   const text = css();
   const { inside, outside } = phoneSplit(text);
-  const hide = '.lg-rail-hidden body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {';
+  const hide = '.lg-rail-hidden body[data-bt-motion]:not(:has([data-composer-seat] [data-composer-card])) [class*="_frame"] > [class*="sidebarCol"] {';
+  const slide = '.lg-rail-hidden body[data-bt-motion]:has([data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="sidebarCol"] {';
   const span = '.lg-rail-hidden body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {';
   assert.ok(inside.includes(hide) && !outside.includes(hide), "rail hidden only under the phone query");
-  assert.match(block(inside, hide), /display: none/);
+  assert.ok(inside.includes(slide) && !outside.includes(slide), "rail slides out only under the phone query");
+  assert.match(block(inside, hide), /display: none/, "pages without a composer just drop it");
+  const out = block(inside, slide);
+  assert.match(out, /transform: translateX\(calc\(-100% - 12px\)\)/, "in a chat it slides off to the left");
+  assert.match(out, /opacity: 0;/);
+  assert.match(out, /visibility: hidden;/, "and cannot be tapped or focused once gone");
+  assert.match(out, /pointer-events: none;/);
   assert.match(block(inside, span), /grid-column: 1 \/ 3/, "center column spans the freed tracks");
   assert.ok(!/_frame"\][^{]*\{[^}]*grid-template-columns/.test(inside), "the app's inline grid columns are not fought");
   assert.match(block(outside, "#lg-rail-toggle {"), /display: none/, "toggle hidden outside the phone block");
@@ -800,18 +807,35 @@ test("trajectory details panel is near-solid glass, not the 34% layer", () => {
   assert.equal([...text.matchAll(/--lg-fill-solid: rgba/g)].length, 2, "light and dark values");
 });
 
-test("phone: composer runs edge to edge with 12px margins; the rail stops above it (phone-only)", () => {
+test("phone: composer is one row beside the rail, wide and two rows without it, and eases between (phone-only)", () => {
   const { inside, outside } = phoneSplit(css());
   assert.ok(!outside.includes("--lg-rail-col"), "desktop layout untouched");
+  assert.ok(!css().includes("--lg-composer-room"), "the composer no longer reaches under the rail");
   assert.match(block(inside, "[data-composer-seat] :has(> [data-composer-card]) {"), /padding-left: 12px !important;\s*padding-right: 12px !important;/);
   assert.match(block(inside, '[data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 1 \/ 3;/,
-    "the conversation spans the rail's column so the composer can");
-  const rail = block(inside, '[data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="sidebarCol"] {');
+    "the conversation spans the rail's column in both states");
+  const rail = block(inside, ':not(.lg-list-open) body[data-bt-motion]:has([data-composer-seat] [data-composer-card]) [class*="_frame"] > [class*="sidebarCol"] {');
   assert.match(rail, /z-index: 2;/, "the rail stays on top and tappable");
-  assert.match(rail, /margin-bottom: var\(--lg-composer-room, 96px\);/, "and ends above the composer");
-  assert.match(block(inside, "[data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {"), /padding-left: var\(--lg-rail-col, 56px\);/,
-    "messages stay clear of the rail");
-  assert.match(block(inside, "[data-conversation-scroll] > [data-composer-seat]:has([data-composer-card]) {"), /margin-left: calc\(-1 \* var\(--lg-rail-col, 56px\)\);/);
+  assert.match(rail, /transition: transform 380ms/, "and slides");
+  const scroll = block(inside, ":not(.lg-list-open) body[data-bt-motion] [data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {");
+  assert.match(scroll, /padding-left: var\(--lg-rail-col, 56px\);/, "messages and composer stay clear of the rail");
+  assert.match(scroll, /transition: padding-left 380ms/, "and widen smoothly when it goes");
+  assert.match(block(inside, ".lg-rail-hidden body[data-bt-motion] [data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {"), /padding-left: 0;/);
+  assert.ok(!inside.includes("[data-conversation-scroll] > [data-composer-seat]:has([data-composer-card]) {"), "no negative margin under the rail");
+
+  const card = "body[data-bt-motion] [data-composer-seat] [data-composer-card] {";
+  assert.match(block(inside, "html.glass-skin " + card), /padding: 8px 8px !important;/, "one row with the rail");
+  assert.match(block(inside, ".lg-rail-hidden " + card), /padding: 12px 10px 54px !important;/, "room for a button row without it");
+  const text = "body[data-bt-motion] [data-composer-seat] [data-composer-card] > [data-input-scroll] {";
+  assert.match(block(inside, "html.glass-skin " + text), /padding: 0 72px 0 36px !important;/, "text between the buttons");
+  assert.match(block(inside, ".lg-rail-hidden " + text), /min-height: 40px;\s*padding: 0 6px !important;/, "text gets the whole first row");
+  assert.match(block(inside, 'html.glass-skin body[data-bt-motion] [data-composer-seat] [data-composer-card] :is([class*="_tools"], [class*="_trailing"]) {'),
+    /position: absolute;\s*bottom: 8px;/, "buttons pinned to the bottom corners in both shapes");
+  // The text clears the buttons before the card drops a row, and the card
+  // grows before the text moves back over the buttons' row.
+  assert.match(block(inside, "html.glass-skin " + card), /transition: padding 380ms cubic-bezier\([^)]*\) 140ms/);
+  assert.match(block(inside, "html.glass-skin " + text), /min-height 380ms cubic-bezier\([^)]*\) 140ms/);
+  assert.match(block(inside, ".lg-rail-hidden " + text), /transition: padding 380ms cubic-bezier\([^)]*\) 140ms/);
 });
 
 test("phone: message tools sit under the reply, never off screen (phone-only)", () => {
@@ -841,7 +865,7 @@ test("every user-side bubble is glass, so a steering or unsent message never fla
   const text = css();
   const sel = ':is([data-chat-flow-kind="user"], [data-chat-flow-kind="steering"], [data-chat-flow-kind="question-reply"], [data-chat-flow-kind="command-input"], [class*="_userRow"]) [class*="_bubble"] {';
   assert.match(block(text, "html.glass-skin " + sel), /background: var\(--lg-user-fill\)/, "light: neutral glass");
-  assert.match(block(text, "html.glass-skin {"), /--lg-user-fill: rgba\(0, 0, 0, 0\.045\)/);
+  assert.match(block(text, "html.glass-skin {"), /--lg-user-fill: #f4f4f4;/, "ChatGPT's sent-message gray");
   assert.match(block(text, "html.glass-skin " + sel), /box-shadow: none;/, "light: flat, no white rim that reads as a ring");
   assert.match(block(text, "body[data-bt-motion]:not([data-ds-dark-theme]) .bt-ububble {"), /box-shadow: none;/, "ds-bot's sent bubble too");
   assert.match(block(text, "[data-ds-dark-theme] " + sel), /inset 1px 1px 0 var\(--lg-rim\)/, "dark keeps the glass edge");
