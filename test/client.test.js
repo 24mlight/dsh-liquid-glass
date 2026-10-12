@@ -962,3 +962,12 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
   assert.match(block(text, "html.glass-skin [data-ds-dark-theme] {"), /--lg-list-bg: rgb\(/, "an opaque list in dark mode");
 });
+
+test("light mode: glass pieces have no rim ring, only their soft shadow; dark keeps its edge", () => {
+  const light = block(css(), "html.glass-skin {");
+  assert.match(light, /--lg-rim-glass: 0 0 0 0 transparent;/);
+  assert.match(light, /--lg-rim-piece: 0 0 0 0 transparent;/);
+  assert.match(light, /--lg-rim: transparent;/);
+  assert.match(light, /--lg-rim-low: transparent;/);
+  assert.match(block(css(), "html.glass-skin [data-ds-dark-theme] {"), /--lg-rim: rgba\(255, 255, 255, 0\.26\)/);
+});
