@@ -257,7 +257,7 @@ test("ds-bot repeated items (bubbles, list rows, cards) carry no backdrop-filter
       // The one selected bot on the narrow rail is a fixed button, glass
       // like the pill; the list's rows stay without blur.
       if (item === ".bt-row" && r.sel.split(/,(?![^(]*\))/).filter((x) => x.includes(".bt-row")).every((x) => x.includes(':has(.bt-rail)') && x.includes('.bt-row[aria-current="page"]'))) continue;
-      assert.doesNotMatch(r.body, /backdrop-filter:\s*(?!none)/, `${item} must not blur: ${r.sel}`);
+      assert.doesNotMatch(r.body, /backdrop-filter:(?!\s*none)/, `${item} must not blur: ${r.sel}`);
     }
   }
   for (const surface of [".bt-panel", ".bt-pane", ".bt-pill", ".bt-drop"]) {
@@ -985,4 +985,25 @@ test("the rail's buttons, the toggle and the pull tab are the same liquid glass 
   assert.ok(text.includes("#lg-rail-toggle,\n      html.glass-skin body[data-bt-motion] #lg-list-tab {"), "toggle and tab included");
   const refract = block(text, ':is(.bt-round, .bt-you, .bt-plus, .bt-row[aria-current="page"]):where(.lg-refract *),');
   assert.match(refract, /backdrop-filter: var\(--lg-refract-ctl\);/, "edge refraction on Chromium, like the pill");
+});
+
+test("light mode: the rail's and the list's buttons are frosted gray glass with no ring; the title pill is untouched", () => {
+  const text = css();
+  // One :is() with the selected row in it, so it outweighs the dark/clear
+  // glass rule (whose :is() also holds .bt-row[aria-current]).
+  const i = text.indexOf('body[data-bt-motion]:not([data-ds-dark-theme]) [class*="sidebarCol"] :is(.bt-round, .bt-you, .bt-plus, .bt-row[aria-current="page"], .bt-tile[aria-current="page"]),');
+  assert.ok(i >= 0, "light-only button glass rule");
+  const head = text.slice(i, text.indexOf("{", i));
+  assert.doesNotMatch(head, /bt-pill/, "the title pill keeps its own glass");
+  for (const part of ["#lg-rail-toggle", "#lg-list-tab", "#lg-list-bar button", '[aria-current="page"]']) {
+    assert.ok(head.includes(part), `covers ${part}`);
+  }
+  const body = text.slice(text.indexOf("{", i) + 1, text.indexOf("\n      }", i));
+  assert.match(body, /background: rgba\(242, 242, 247, 0\.78\);/, "a faint gray body");
+  assert.match(body, /border-width: 0;/, "no border band around the body");
+  assert.match(body, /inset 0 1px 0 rgba\(255, 255, 255, 1\)/, "the bright top edge");
+  assert.doesNotMatch(body, /inset 0 -1px \d/, "no blurred inner shade drawing a contour");
+  assert.match(body, /backdrop-filter: none;/, "nothing to frost on a white page");
+  assert.doesNotMatch(body, /0 0 0 [0-9.]+px|0 1px 2px/, "no hairline or contour shadow");
+  assert.match(block(text, 'body[data-bt-motion]:not([data-ds-dark-theme]) #lg-list-bar {'), /box-shadow: none;/, "the back button's holder adds no second edge");
 });
