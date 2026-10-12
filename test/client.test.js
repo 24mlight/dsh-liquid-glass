@@ -254,6 +254,9 @@ test("ds-bot repeated items (bubbles, list rows, cards) carry no backdrop-filter
   const text = css();
   for (const item of [".bt-bubble", ".bt-row", ".bt-tile", ".bt-mem-row", ".bt-set-card", ".bt-us-card"]) {
     for (const r of rules(text, item)) {
+      // The one selected bot on the narrow rail is a fixed button, glass
+      // like the pill; the list's rows stay without blur.
+      if (item === ".bt-row" && r.sel.split(/,(?![^(]*\))/).filter((x) => x.includes(".bt-row")).every((x) => x.includes(':has(.bt-rail)') && x.includes('.bt-row[aria-current="page"]'))) continue;
       assert.doesNotMatch(r.body, /backdrop-filter:\s*(?!none)/, `${item} must not blur: ${r.sel}`);
     }
   }
@@ -522,15 +525,15 @@ test("with a cordis context, the skin is disposed with the plugin", () => {
   assert.ok(!b.classes.has("glass-skin"));
 });
 
-test("refraction is used only on the title pill, composer and settings sheets", () => {
+test("refraction is used only on the title pill, composer, settings sheets and the rail's fixed buttons", () => {
   const text = css();
   const users = rules(text, "").filter((r) => /url\(#lg-refract|var\(--lg-refract-/.test(r.body));
   assert.ok(users.length >= 3);
-  const allowed = /\[data-composer-card\]|\.bt-pill|\.bt-settings|\[data-shortcut-modal="settings"\]|lg-refract body/;
+  const allowed = /\[data-composer-card\]|\.bt-pill|\.bt-settings|\[data-shortcut-modal="settings"\]|lg-refract body|:has\(\.bt-rail\) :is\(\.bt-round, \.bt-you, \.bt-plus, \.bt-row\[aria-current="page"\]\)/;
   for (const r of users) {
     for (const part of r.sel.split(/,(?![^(]*\))/)) {
       assert.match(part, allowed, `refraction on an unexpected surface: ${part}`);
-      assert.doesNotMatch(part, /bubble|\.bt-msg|\.bt-row|_bubble|md-code|\.bt-q\b/, `refraction on content: ${part}`);
+      assert.doesNotMatch(part.replace('.bt-row[aria-current="page"]', ""), /bubble|\.bt-msg|\.bt-row|_bubble|md-code|\.bt-q\b/, `refraction on content: ${part}`);
     }
   }
   // and it is keyed on the class the script sets (Chromium only)
@@ -970,4 +973,16 @@ test("light mode: glass pieces have no rim ring, only their soft shadow; dark ke
   assert.match(light, /--lg-rim: transparent;/);
   assert.match(light, /--lg-rim-low: transparent;/);
   assert.match(block(css(), "html.glass-skin [data-ds-dark-theme] {"), /--lg-rim: rgba\(255, 255, 255, 0\.26\)/);
+});
+
+test("the rail's buttons, the toggle and the pull tab are the same liquid glass as the title pill", () => {
+  const text = css();
+  const sel = 'body[data-bt-motion] [class*="sidebarCol"]:has(.bt-rail) :is(.bt-round, .bt-you, .bt-plus, .bt-row[aria-current="page"]),';
+  const glass = block(text, sel);
+  assert.match(glass, /background: var\(--lg-fill-ctl\);/, "the pill's clear fill");
+  assert.match(glass, /backdrop-filter: blur\(var\(--lg-blur-ctl\)\)/, "frosted");
+  assert.match(glass, /box-shadow: var\(--lg-rim-glass\), var\(--lg-depth\);/, "the pill's rim and lift");
+  assert.ok(text.includes("#lg-rail-toggle,\n      html.glass-skin body[data-bt-motion] #lg-list-tab {"), "toggle and tab included");
+  const refract = block(text, ':is(.bt-round, .bt-you, .bt-plus, .bt-row[aria-current="page"]):where(.lg-refract *),');
+  assert.match(refract, /backdrop-filter: var\(--lg-refract-ctl\);/, "edge refraction on Chromium, like the pill");
 });
