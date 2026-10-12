@@ -344,7 +344,7 @@ const UA = {
 };
 
 /** A fuller DOM stub: element registry, <body>, navigator, matchMedia. */
-function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = false, pill = null, rail = null, animations = null } = {}) {
+function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = false, pill = null, rail = null, animations = null, extend = {} } = {}) {
   let registration = null;
   const byId = new Map();
   const node = (id) => ({
@@ -390,6 +390,7 @@ function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = fal
     ...(animations ? { getAnimations: () => animations } : {}),
     addEventListener(type, fn) { if (type === "click") clicks.add(fn); },
     removeEventListener(type, fn) { if (type === "click") clicks.delete(fn); },
+    ...(extend.document || {}),
   };
   const clicks = new Set();
   const store = new Map();
@@ -413,6 +414,7 @@ function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = fal
       getItem: (k) => { if (storageBlocked) throw new Error("blocked"); return store.has(k) ? store.get(k) : null; },
       setItem: (k, v) => { if (storageBlocked) throw new Error("blocked"); store.set(k, String(v)); },
     },
+    ...(extend.window || {}),
   };
   new Function("window", "document", "MutationObserver", source)(window, document, MutationObserver);
   const mod = registration.factory(() => ({}));
@@ -810,7 +812,7 @@ test("trajectory details panel is near-solid glass, not the 34% layer", () => {
   assert.equal([...text.matchAll(/--lg-fill-solid: rgba/g)].length, 2, "light and dark values");
 });
 
-test("phone: composer is one row beside the rail, wide and two rows without it, and eases between (phone-only)", () => {
+test("phone: composer is one row beside the rail, wide and two rows without it, laid out in one step (phone-only)", () => {
   const { inside, outside } = phoneSplit(css());
   assert.ok(!outside.includes("--lg-rail-col"), "desktop layout untouched");
   assert.ok(!css().includes("--lg-composer-room"), "the composer no longer reaches under the rail");
@@ -822,7 +824,7 @@ test("phone: composer is one row beside the rail, wide and two rows without it, 
   assert.match(rail, /transition: transform 380ms/, "and slides");
   const scroll = block(inside, ":not(.lg-list-open) body[data-bt-motion] [data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {");
   assert.match(scroll, /padding-left: var\(--lg-rail-col, 56px\);/, "messages and composer stay clear of the rail");
-  assert.match(scroll, /transition: padding-left 380ms/, "and widen smoothly when it goes");
+  assert.doesNotMatch(scroll, /transition/, "one layout step (the script plays the slide back)");
   assert.match(block(inside, ".lg-rail-hidden body[data-bt-motion] [data-conversation-scroll]:has(> [data-composer-seat] [data-composer-card]) {"), /padding-left: 0;/);
   assert.ok(!inside.includes("[data-conversation-scroll] > [data-composer-seat]:has([data-composer-card]) {"), "no negative margin under the rail");
 
@@ -834,11 +836,301 @@ test("phone: composer is one row beside the rail, wide and two rows without it, 
   assert.match(block(inside, ".lg-rail-hidden " + text), /min-height: 40px;\s*padding: 0 6px !important;/, "text gets the whole first row");
   assert.match(block(inside, 'html.glass-skin body[data-bt-motion] [data-composer-seat] [data-composer-card] :is([class*="_tools"], [class*="_trailing"]) {'),
     /position: absolute;\s*bottom: 8px;/, "buttons pinned to the bottom corners in both shapes");
-  // The text clears the buttons before the card drops a row, and the card
-  // grows before the text moves back over the buttons' row.
-  assert.match(block(inside, "html.glass-skin " + card), /transition: padding 380ms cubic-bezier\([^)]*\) 140ms/);
-  assert.match(block(inside, "html.glass-skin " + text), /min-height 380ms cubic-bezier\([^)]*\) 140ms/);
-  assert.match(block(inside, ".lg-rail-hidden " + text), /transition: padding 380ms cubic-bezier\([^)]*\) 140ms/);
+  // No size of the conversation or the composer eases: each frame would
+  // re-lay-out the chat and resize the seat DSH watches.
+  assert.match(block(inside, "html.glass-skin " + card), /transition: border-color 0\.15s ease, background-color 0\.15s ease !important;/);
+  assert.match(block(inside, "html.glass-skin " + text), /transition: none !important;/);
+  assert.ok(!/transition:[^;]*\b(padding|min-height|bottom|left|right)\b/.test(inside), "no layout property transitions on phones");
+  // While the change plays back, the card's glass is its ::before.
+  const morph = "body[data-bt-motion] [data-composer-seat] [data-composer-card][data-lg-morph]";
+  assert.match(block(inside, morph + " {"), /background: transparent !important;[\s\S]*backdrop-filter: none !important;\s*transition: none !important;/);
+  const glass = block(inside, morph + "::before {");
+  assert.match(glass, /position: absolute;/);
+  assert.match(glass, /background: var\(--lg-m-bg, transparent\);/);
+  assert.match(glass, /backdrop-filter: var\(--lg-m-bf, none\);/);
+  assert.match(block(inside, morph + " > [data-input-scroll] {"), /position: relative;/, "the text paints over it");
+});
+
+/** A phone conversation for the rail playback: the chat column, the
+ * composer card (text and two button groups) in a seat, and boxes that
+ * move when html.lg-rail-hidden flips (rail 62px wide; the card grows a
+ * row taller and the text moves from between the buttons to the top). */
+function phoneScene(b) {
+  const hidden = () => b.classes.has("lg-rail-hidden");
+  const rect = (l, t, w, h) => ({ left: l, top: t, right: l + w, bottom: t + h, width: w, height: h });
+  const anims = [];
+  const el = (name, props) => {
+    const attrs = new Map();
+    const style = new Map();
+    return Object.assign(Object.create(globalThis.Element.prototype), {
+      name, attrs, styleMap: style, children: [],
+      hasAttribute: (a) => attrs.has(a),
+      setAttribute: (a, v) => attrs.set(a, v),
+      removeAttribute: (a) => attrs.delete(a),
+      style: {
+        setProperty: (k, v) => style.set(k, v),
+        removeProperty: (k) => style.delete(k),
+      },
+      contains: () => false,
+      cs: {},
+    }, props);
+  };
+  const view = el("view", { getBoundingClientRect: () => (hidden() ? rect(12, -400, 366, 1200) : rect(70, -400, 308, 1400)), cs: { display: "block" } });
+  const slot = el("slot", { cs: { display: "contents" } });
+  slot.children = [view];
+  const seat = el("seat");
+  seat.setAttribute("data-composer-seat", "");
+  const card = el("card", {
+    getBoundingClientRect: () => (hidden() ? rect(12, 700, 366, 100) : rect(70, 744, 308, 56)),
+  });
+  card.cs = new Proxy({}, { get: (_t, k) => ({
+    borderTopLeftRadius: hidden() ? "26px" : "22px", borderTopWidth: "1px", borderTopColor: "rgba(0, 0, 0, 0.16)",
+    backgroundColor: card.attrs.has("data-lg-morph") ? "rgba(0, 0, 0, 0)" : "rgba(255, 255, 255, 0.3)",
+    boxShadow: "none", backdropFilter: "blur(3px)", display: "block" })[k] });
+  const text = el("text", {
+    getBoundingClientRect: () => (hidden() ? rect(22, 712, 346, 40) : rect(78, 758, 292, 28)),
+  });
+  text.cs = new Proxy({}, { get: (_t, k) => ({
+    paddingLeft: hidden() ? "6px" : "36px", paddingRight: hidden() ? "6px" : "72px", paddingTop: "0px", display: "block" })[k] });
+  const tools = el("tools", { getBoundingClientRect: () => (hidden() ? rect(22, 754, 28, 28) : rect(78, 758, 28, 28)) });
+  const trailing = el("trailing", { getBoundingClientRect: () => (hidden() ? rect(296, 754, 72, 28) : rect(298, 758, 72, 28)) });
+  const scroll = el("scroll", { scrollTop: 600, scrollHeight: 1400, clientHeight: 800,
+    getBoundingClientRect: () => rect(0, 0, 390, 844) });
+  scroll.children = [slot, seat];
+  card.closest = (sel) => (sel === "[data-conversation-scroll]" ? scroll : null);
+  card.querySelector = (sel) => (sel.includes("[data-input-scroll]") ? text : null);
+  card.querySelectorAll = (sel) => (sel.includes("_tools") ? [tools, trailing] : []);
+  globalThis.Element.prototype.animate = function (keyframes, options) {
+    let done;
+    const a = { el: this, keyframes, options, cancelled: false,
+      finished: new Promise((r) => { done = r; }),
+      cancel() { this.cancelled = true; },
+      effect: { getComputedTiming: () => ({ progress: 0 }) },
+      finish() { done(); } };
+    anims.push(a);
+    return a;
+  };
+  return { view, card, text, tools, trailing, scroll, anims };
+}
+
+function phoneBrowser() {
+  globalThis.Element = function Element() {};
+  const frames = [];
+  globalThis.requestAnimationFrame = (fn) => frames.push(fn);
+  let scene = null;
+  const b = browser({
+    extend: {
+      window: {
+        matchMedia: (q) => ({ matches: q.includes("max-width: 480px"), addEventListener() {}, removeEventListener() {} }),
+        getComputedStyle: (e) => e.cs,
+      },
+      document: {
+        querySelector: (sel) => (sel.includes("[data-composer-card]") && scene ? scene.card : null),
+      },
+    },
+  });
+  b.mod.apply();
+  scene = phoneScene(b);
+  return { b, scene, frames };
+}
+
+test("phone: hiding the rail lays out once and plays the move back as transforms", async () => {
+  const { b, scene, frames } = phoneBrowser();
+  try {
+    scene.scroll.scrollTop = 600;                   // scrolled to the end (1400 - 800)
+    b.click("#lg-rail-toggle");
+    assert.ok(b.classes.has("lg-rail-hidden"), "switched in one step");
+    assert.ok(scene.card.attrs.has("data-lg-morph"), "the card hands its glass to its ::before");
+    assert.equal(scene.card.styleMap.get("--lg-m-bg"), "rgba(255, 255, 255, 0.3)", "glass read before it was handed over");
+    assert.equal(scene.scroll.scrollTop, 1400, "the chat stays at its end while it re-wraps");
+
+    const glass = scene.anims.filter((a) => a.el === scene.card);
+    assert.equal(glass.length, 2);
+    assert.ok(glass.every((a) => a.options.pseudoElement === "::before" && a.options.duration === 380));
+    assert.deepEqual(glass[0].keyframes[0], { left: "57px", right: "-1px", bottom: "-1px" }, "from the old box (border included)");
+    assert.deepEqual(glass[0].keyframes[1], { left: "-1px", right: "-1px", bottom: "-1px" }, "to the new one");
+    assert.deepEqual(glass[1].keyframes[0], { top: "43px", borderRadius: "22px" });
+    assert.ok(!glass[1].options.delay, "growing: the height goes first");
+
+    const view = scene.anims.find((a) => a.el === scene.view);
+    assert.deepEqual(view.keyframes, [{ transform: "translate(58px, 0px)" }, { transform: "none" }], "the chat slides sideways only");
+    const tools = scene.anims.find((a) => a.el === scene.tools);
+    assert.deepEqual(tools.keyframes[0], { transform: "translate(56px, 4px)" });
+
+    const text = scene.anims.filter((a) => a.el === scene.text);
+    const up = text.find((a) => "translate" in a.keyframes[0]);
+    const across = text.find((a) => "transform" in a.keyframes[0]);
+    const clip = text.find((a) => "clipPath" in a.keyframes[0]);
+    assert.deepEqual(up.keyframes[0], { translate: "0 46px" }, "up from the buttons' row first");
+    assert.ok(!up.options.delay);
+    assert.deepEqual(across.keyframes[0], { transform: "translateX(86px)" }, "the text itself, padding included");
+    assert.equal(across.options.delay, 140, "then across");
+    assert.equal(clip.keyframes[0].clipPath, "inset(0 156px 0 0)", "the wider text starts clipped to the old card");
+
+    for (const a of scene.anims) a.finish();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.ok(!scene.card.attrs.has("data-lg-morph"), "the card takes its glass back");
+    assert.equal(scene.card.styleMap.get("transition"), "none", "without fading it in");
+    while (frames.length) frames.shift()();
+    assert.ok(!scene.card.styleMap.has("transition"), "its own transitions back two frames later");
+  } finally {
+    delete globalThis.Element;
+    delete globalThis.requestAnimationFrame;
+  }
+});
+
+test("phone: showing the rail slides the text back before the card drops a row; a second tap restarts from mid-way", async () => {
+  const { b, scene } = phoneBrowser();
+  try {
+    b.click("#lg-rail-toggle");
+    const first = scene.anims.slice();
+    b.click("#lg-rail-toggle");
+    assert.ok(!b.classes.has("lg-rail-hidden"));
+    assert.ok(first.every((a) => a.cancelled), "the running playback stops");
+    assert.ok(scene.card.attrs.has("data-lg-morph"));
+    const again = scene.anims.slice(first.length);
+    const height = again.find((a) => a.el === scene.card && "top" in a.keyframes[0]);
+    assert.equal(height.options.delay, 140, "shrinking: the height drops after the text moved aside");
+    const up = again.find((a) => a.el === scene.text && "translate" in a.keyframes[0]);
+    assert.equal(up.options.delay, 140);
+    const across = again.find((a) => a.el === scene.text && "transform" in a.keyframes[0]);
+    assert.ok(!across.options.delay);
+    // Stopped at progress 0, the glass restarts from where the first
+    // playback began: the old, one-row box.
+    const sides = again.find((a) => a.el === scene.card && "left" in a.keyframes[0]);
+    assert.deepEqual(sides.keyframes[0], { left: "-1px", right: "-1px", bottom: "-1px" });
+  } finally {
+    delete globalThis.Element;
+    delete globalThis.requestAnimationFrame;
+  }
+});
+
+test("a three-finger tap shows or hides the frame meter, remembered", () => {
+  const touch = new Set();
+  const frames = [];
+  globalThis.requestAnimationFrame = (fn) => { frames.push(fn); return frames.length; };
+  globalThis.cancelAnimationFrame = () => {};
+  const appended = [];
+  const el = () => ({ attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, remove() { appended.splice(appended.indexOf(this), 1); } });
+  try {
+    const b = browser({
+      extend: {
+        document: {
+          addEventListener(type, fn) { if (type === "touchstart") touch.add(fn); },
+          removeEventListener(type, fn) { if (type === "touchstart") touch.delete(fn); },
+          createElement: el,
+        },
+      },
+    });
+    b.document.body.appendChild = (e) => appended.push(e);
+    b.mod.apply();
+    const tap = (n) => { for (const fn of touch) fn({ touches: new Array(n).fill({}) }); };
+    tap(2);
+    assert.equal(appended.length, 0, "two fingers are a pinch, not the meter");
+    tap(3);
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0].id, "lg-meter");
+    assert.equal(b.store.get("dsh-glass-skin:meter"), "on");
+    // 120Hz frames with one 25ms hitch.
+    let t = 0;
+    for (let i = 0; i < 260; i++) { const fn = frames.shift(); t += i === 60 ? 25 : 8.33; fn(t); }
+    assert.match(appended[0].textContent, /^120Hz  1\d\dfps  掉帧 2\/10s  最长 25ms$/);
+    tap(3);
+    assert.equal(appended.length, 0, "hidden again");
+    assert.equal(b.store.get("dsh-glass-skin:meter"), "off");
+    assert.match(block(css(), "#lg-meter {"), /pointer-events: none;/, "never in the way of a tap");
+  } finally {
+    delete globalThis.requestAnimationFrame;
+    delete globalThis.cancelAnimationFrame;
+  }
+});
+
+/** DSH's frame, its sidebar column (the list panel) and its sidebar
+ * toggle, with pointer events fired straight at the skin's listeners. */
+function listBrowser() {
+  const frames = [];
+  globalThis.requestAnimationFrame = (fn) => frames.push(fn);
+  const on = new Map();
+  const styleOf = () => {
+    const m = new Map();
+    return { map: m, gridTemplateColumns: "56px minmax(0px, 1fr) minmax(0px, 0px)",
+      setProperty: (k, v, p) => m.set(k, p ? v + " !" + p : v), removeProperty: (k) => m.delete(k) };
+  };
+  const frame = { collapsed: true, style: styleOf(), hasAttribute: (a) => a === "data-sidebar-collapsed" && frame.collapsed };
+  const panel = { style: styleOf(), getBoundingClientRect: () => ({ left: 0, right: 62, top: 0, bottom: 800, width: 62, height: 800 }) };
+  let mounts = 0;
+  const toggle = { click() { mounts++; frame.collapsed = !frame.collapsed; } };
+  const b = browser({
+    extend: {
+      window: { innerWidth: 390 },
+      document: {
+        addEventListener(type, fn) { on.set(type, (on.get(type) || []).concat(fn)); },
+        removeEventListener() {},
+        querySelector(sel) {
+          if (sel.includes("_toggle")) return toggle;
+          if (sel.includes("sidebarCol") && sel.includes("_frame")) return panel;
+          if (sel.includes("_frame")) return frame;
+          return null;
+        },
+      },
+    },
+  });
+  b.mod.apply();
+  const fire = (type, x, t, target = { closest: () => null }) => {
+    for (const fn of on.get(type) || []) {
+      fn({ target, clientX: x, clientY: 400, pointerId: 1, button: 0, timeStamp: t, cancelable: true, preventDefault() {}, stopPropagation() {} });
+    }
+  };
+  const tab = { closest: (sel) => (sel === "#lg-list-tab" ? {} : null) };
+  const flush = () => { while (frames.length) frames.shift()(); };
+  return { b, frame, panel, fire, tab, flush, mounts: () => mounts };
+}
+
+test("bot list: the press on the tab starts DSH's list render; a tap springs it open", () => {
+  const { b, panel, fire, tab, flush, mounts } = listBrowser();
+  try {
+    fire("pointerdown", 60, 1000, tab);
+    assert.equal(mounts(), 1, "DSH's sidebar opens while the finger is still down");
+    assert.ok(b.classes.has("lg-list-open"));
+    assert.equal(panel.style.map.get("width"), "62px !important", "at the rail's width");
+    assert.equal(panel.style.map.get("transition"), "none !important");
+    fire("pointerup", 60, 1090);
+    flush();
+    assert.equal(panel.style.map.get("width"), "min(calc(100vw - 72px), 360px) !important", "then springs open");
+    assert.equal(panel.style.map.get("transition-duration"), "440ms");
+    assert.ok(!panel.style.map.has("transition"));
+    assert.ok(![...b.styleProps.keys()].some((k) => k.includes("list-w")), "nothing on <html> that every element inherits");
+  } finally {
+    delete globalThis.requestAnimationFrame;
+  }
+});
+
+test("bot list: a flick carries on at the finger's speed", () => {
+  const { panel, fire, tab, flush } = listBrowser();
+  try {
+    fire("pointerdown", 60, 1000, tab);
+    for (const [x, t] of [[80, 1010], [110, 1030], [140, 1050], [170, 1070]]) {
+      fire("pointermove", x, t);
+      assert.match(panel.style.map.get("width"), /px !important$/, "the width follows the finger");
+    }
+    fire("pointerup", 170, 1075);
+    flush();
+    // 1.5px/ms with 318 - 172 = 146px left: 2.25 * 146 / 1.5 ≈ 219ms.
+    assert.equal(panel.style.map.get("transition-duration"), "219ms");
+  } finally {
+    delete globalThis.requestAnimationFrame;
+  }
+});
+
+test("dark mode: the rail's buttons drop their filter over the plain rail; the floating toggle keeps it", () => {
+  const text = css();
+  const flat = block(text, 'body[data-bt-motion][data-ds-dark-theme] [class*="sidebarCol"]:has(.bt-rail) :is(.bt-round, .bt-you, .bt-plus, .bt-row[aria-current="page"]) {');
+  assert.match(flat, /backdrop-filter: none;/);
+  const darkToggle = text.split("}").filter((r) => {
+    const sel = r.slice(0, r.indexOf("{")).replace(/:not\(\[data-ds-dark-theme\]\)/g, "");
+    return sel.includes("[data-ds-dark-theme]") && sel.includes("lg-rail-toggle") && /backdrop-filter: none/.test(r);
+  });
+  assert.deepEqual(darkToggle, [], "the toggle floats over the chat");
 });
 
 test("phone: message tools sit under the reply, never off screen (phone-only)", () => {
@@ -939,7 +1231,7 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(block(inside, ".lg-rail-hidden #lg-list-tab {"), /display: none/, "no tab when the phone rail is closed");
   const layer = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {');
   assert.match(layer, /position: fixed/);
-  assert.match(layer, /width: var\(--lg-list-w, min\(calc\(100vw - 72px\), 360px\)\)/,
+  assert.match(layer, /width: min\(calc\(100vw - 72px\), 360px\);/,
     "open, a strip of the chat stays on the right on a phone; a 360px drawer on a larger screen");
   assert.match(layer, /touch-action: pan-y/, "vertical scroll stays native; sideways swipes reach the script");
   const z = Number(/z-index: (\d+)/.exec(layer)[1]);
@@ -961,7 +1253,7 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   const dissolve = block(text, '.lg-list-open.lg-list-closing body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] > * {');
   assert.match(dissolve, /opacity: 0/);
   assert.match(dissolve, /transition: opacity [\d.]+s ease [\d.]+s/, "the list dissolves during its slide back");
-  assert.match(block(text, ".lg-list-open.lg-list-drag body"), /transition: none/, "the width follows the finger");
+  assert.ok(!text.includes("--lg-list-w"), "no page-wide custom property for the width (a drag restyled every element)");
   assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
   assert.match(block(text, "html.glass-skin [data-ds-dark-theme] {"), /--lg-list-bg: rgb\(/, "an opaque list in dark mode");
 });
