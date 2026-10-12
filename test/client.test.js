@@ -794,7 +794,8 @@ test("phone: message tools sit under the reply, never off screen (phone-only)", 
   assert.ok(!outside.includes(".bt-msg-line > .bt-tools"), "desktop keeps ds-bot's side tools");
   const tools = block(inside, ".bt-astack .bt-msg-line > .bt-tools {");
   assert.match(tools, /bottom: 0/);
-  assert.match(tools, /left: 0/);
+  assert.match(tools, /(^|\s)right: 0;/, "at the reply's right edge");
+  assert.match(tools, /(^|\s)left: auto;/);
   assert.match(tools, /transform: none/);
   assert.match(block(inside, ".bt-msg-line > .bt-tools::after {"), /display: none/, "no 128px hover bridge to widen the page");
   assert.match(inside, /\.bt-msg:last-child > \.bt-msg-line:has\(> \.bt-tools\)[^{]*\{\s*padding-bottom: 28px/, "room made under the reply");
