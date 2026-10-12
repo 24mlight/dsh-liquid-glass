@@ -882,14 +882,15 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(block(inside, ".lg-rail-hidden #lg-list-tab {"), /display: none/, "no tab when the phone rail is closed");
   const layer = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {');
   assert.match(layer, /position: fixed/);
-  assert.match(layer, /width: var\(--lg-list-w, calc\(100vw - 72px\)\)/, "open, a strip of the chat stays on the right");
+  assert.match(layer, /width: var\(--lg-list-w, min\(calc\(100vw - 72px\), 360px\)\)/,
+    "open, a strip of the chat stays on the right on a phone; a 360px drawer on a larger screen");
   assert.match(layer, /touch-action: pan-y/, "vertical scroll stays native; sideways swipes reach the script");
   const z = Number(/z-index: (\d+)/.exec(layer)[1]);
   assert.ok(z < 60, "ds-bot's menus (z 60) stay above the list");
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] {'), /grid-template-columns: var\(--lg-frame-cols/,
     "the chat keeps its grid while the sidebar is open");
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 2/);
-  assert.match(block(text, '[class*="sidebarCol"] [class*="_root"][style*="width"] {'), /width: calc\(100vw - 72px\) !important/,
+  assert.match(block(text, '[class*="sidebarCol"] [class*="_root"][style*="width"] {'), /width: min\(calc\(100vw - 72px\), 360px\) !important/,
     "content is laid out at the open width, so the panel reveals it");
   const dim = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {');
   assert.match(dim, /opacity: 0\.4/);
