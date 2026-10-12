@@ -866,7 +866,7 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] {'), /grid-template-columns: var\(--lg-frame-cols/,
     "the chat keeps its grid while the sidebar is open");
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 2/);
-  assert.match(block(text, '[class*="sidebarCol"] > [class*="_root"] {'), /width: 100vw !important/,
+  assert.match(block(text, '[class*="sidebarCol"] [class*="_root"][style*="width"] {'), /width: 100vw !important/,
     "content is laid out at full width, so the panel reveals it");
   assert.match(block(text, ".lg-list-open.lg-list-drag body"), /transition: none/, "the width follows the finger");
   assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
