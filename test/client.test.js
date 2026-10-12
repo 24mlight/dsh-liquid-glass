@@ -341,7 +341,7 @@ const UA = {
 };
 
 /** A fuller DOM stub: element registry, <body>, navigator, matchMedia. */
-function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = false, pill = null, rail = null } = {}) {
+function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = false, pill = null, rail = null, animations = null } = {}) {
   let registration = null;
   const byId = new Map();
   const node = (id) => ({
@@ -355,6 +355,7 @@ function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = fal
     classes,
     style: {
       setProperty(k, v) { styleProps.set(k, v); },
+      getPropertyValue(k) { return styleProps.get(k) || ""; },
       removeProperty(k) { styleProps.delete(k); },
     },
     classList: {
@@ -381,8 +382,9 @@ function browser({ ua = UA.chrome, brands, reduced = false, storageBlocked = fal
     getElementById(id) { return byId.get(id) || null; },
     querySelector(sel) {
       const r = sel.includes(".bt-pill") ? pill : sel.includes(".bt-rail") ? rail : null;
-      return r ? { getBoundingClientRect: () => r } : null;
+      return r ? { getBoundingClientRect: () => r, contains: () => false } : null;
     },
+    ...(animations ? { getAnimations: () => animations } : {}),
     addEventListener(type, fn) { if (type === "click") clicks.add(fn); },
     removeEventListener(type, fn) { if (type === "click") clicks.delete(fn); },
   };
@@ -850,6 +852,27 @@ test("bot list: the rail's right edge and middle are measured for the tab", () =
   assert.equal(b.styleProps.get("--lg-rail-mid"), "438px");
 });
 
+test("bot list: a rail caught sliding in is measured once it stops, not mid-slide", async () => {
+  let finish;
+  const slide = {
+    playState: "running",
+    effect: { target: { contains: () => true } },
+    finished: new Promise((resolve) => { finish = resolve; }),
+  };
+  const rail = { left: 49, top: 88, width: 49, height: 700, right: 98 };
+  const b = browser({ rail, animations: [slide] });
+  b.mod.apply();
+  assert.equal(b.styleProps.get("--lg-rail-right"), undefined, "nothing written mid-slide");
+  assert.equal(b.styleProps.get("--lg-rail-cx"), undefined);
+  slide.playState = "finished";
+  Object.assign(rail, { left: 0, right: 49 });
+  finish();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(b.styleProps.get("--lg-rail-right"), "49px", "measured where the rail came to rest");
+  assert.equal(b.styleProps.get("--lg-rail-cx"), "24.5px");
+  b.mod.dispose();
+});
+
 test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the chat, under ds-bot's menus", () => {
   const text = css();
   assert.match(block(text, "html.glass-skin #lg-list-tab {"), /display: none/);
@@ -873,8 +896,13 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(dim, /pointer-events: none/, "taps on the dimmed chat go to the script, which closes the list");
   assert.match(block(text, '.lg-list-open.lg-list-closing body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /opacity: 1/,
     "the chat brightens while the list closes, not at the end");
-  assert.match(block(text, '.lg-list-settle body[data-bt-motion] [class*="sidebarCol"] [class*="_railIn"] * {'), /animation: none !important/,
-    "DSH's rail slide-in does not replay over our close");
+  assert.match(block(text, '.lg-list-quiet body[data-bt-motion] [class*="sidebarCol"] [class*="_railIn"] * {'), /animation: none !important/,
+    "DSH's rail slide-in does not play (or replay) after our close");
+  assert.ok(!text.includes('.lg-list-settle body[data-bt-motion] [class*="sidebarCol"] [class*="_railIn"]'),
+    "the hold is not tied to the short settle class, whose removal would restart the slide-in");
+  const dissolve = block(text, '.lg-list-open.lg-list-closing body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] > * {');
+  assert.match(dissolve, /opacity: 0/);
+  assert.match(dissolve, /transition: opacity [\d.]+s ease [\d.]+s/, "the list dissolves during its slide back");
   assert.match(block(text, ".lg-list-open.lg-list-drag body"), /transition: none/, "the width follows the finger");
   assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
   assert.match(block(text, "html.glass-skin [data-ds-dark-theme] {"), /--lg-list-bg: rgb\(/, "an opaque list in dark mode");
