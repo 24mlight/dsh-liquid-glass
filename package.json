@@ -1,6 +1,6 @@
 {
   "name": "dsh-glass-skin",
-  "version": "0.3.15",
+  "version": "0.3.16",
   "description": "Liquid Glass skin for DeepSeek Harness (DSH): frosted app bar, glass sidebar, translucent surfaces, flat colors with no gradients. Web + mobile WebView.",
   "keywords": [
     "dsh-plugin",

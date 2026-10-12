@@ -859,15 +859,22 @@ test("bot list CSS: tab only beside ds-bot's rail, full-screen layer over the ch
   assert.match(block(inside, ".lg-rail-hidden #lg-list-tab {"), /display: none/, "no tab when the phone rail is closed");
   const layer = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="sidebarCol"] {');
   assert.match(layer, /position: fixed/);
-  assert.match(layer, /width: var\(--lg-list-w, 100vw\)/);
+  assert.match(layer, /width: var\(--lg-list-w, calc\(100vw - 72px\)\)/, "open, a strip of the chat stays on the right");
   assert.match(layer, /touch-action: pan-y/, "vertical scroll stays native; sideways swipes reach the script");
   const z = Number(/z-index: (\d+)/.exec(layer)[1]);
   assert.ok(z < 60, "ds-bot's menus (z 60) stay above the list");
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] {'), /grid-template-columns: var\(--lg-frame-cols/,
     "the chat keeps its grid while the sidebar is open");
   assert.match(block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /grid-column: 2/);
-  assert.match(block(text, '[class*="sidebarCol"] [class*="_root"][style*="width"] {'), /width: 100vw !important/,
-    "content is laid out at full width, so the panel reveals it");
+  assert.match(block(text, '[class*="sidebarCol"] [class*="_root"][style*="width"] {'), /width: calc\(100vw - 72px\) !important/,
+    "content is laid out at the open width, so the panel reveals it");
+  const dim = block(text, '.lg-list-open body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {');
+  assert.match(dim, /opacity: 0\.4/);
+  assert.match(dim, /pointer-events: none/, "taps on the dimmed chat go to the script, which closes the list");
+  assert.match(block(text, '.lg-list-open.lg-list-closing body[data-bt-motion] [class*="_frame"] > [class*="centerCol"] {'), /opacity: 1/,
+    "the chat brightens while the list closes, not at the end");
+  assert.match(block(text, '.lg-list-settle body[data-bt-motion] [class*="sidebarCol"] [class*="_railIn"] * {'), /animation: none !important/,
+    "DSH's rail slide-in does not replay over our close");
   assert.match(block(text, ".lg-list-open.lg-list-drag body"), /transition: none/, "the width follows the finger");
   assert.match(block(text, ".lg-list-open #lg-list-bar {"), /display: block/);
   assert.match(block(text, "html.glass-skin [data-ds-dark-theme] {"), /--lg-list-bg: rgb\(/, "an opaque list in dark mode");
